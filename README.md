@@ -1,1 +1,2 @@
-# programacionWeb
+-Clonar el repositorio
+-Pararse en la carpeta y ejecutar "go run ."
