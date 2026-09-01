@@ -92,9 +92,7 @@ func (q *Queries) ListMaterias(ctx context.Context) ([]Materium, error) {
 
 const updateMateria = `-- name: UpdateMateria :one
 UPDATE materia
-SET nombre = $2,
-    anio = $3,
-    cuatrimestre = $4
+SET nombre = $2, anio = $3, cuatrimestre = $4
 WHERE id_materia = $1
 RETURNING id_materia, nombre, anio, cuatrimestre
 `

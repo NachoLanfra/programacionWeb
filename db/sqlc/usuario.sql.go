@@ -92,9 +92,7 @@ func (q *Queries) ListUsuarios(ctx context.Context) ([]Usuario, error) {
 
 const updateUsuario = `-- name: UpdateUsuario :one
 UPDATE usuario
-SET nombre_apellido = $2,
-    email = $3,
-    telefono = $4
+SET nombre_apellido = $2, email = $3, telefono = $4
 WHERE id_usuario = $1
 RETURNING id_usuario, nombre_apellido, email, telefono
 `

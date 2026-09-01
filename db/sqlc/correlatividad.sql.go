@@ -9,9 +9,10 @@ import (
 	"context"
 )
 
-const addCorrelatividad = `-- name: AddCorrelatividad :exec
+const addCorrelatividad = `-- name: AddCorrelatividad :one
 INSERT INTO correlatividad_materia (materia_id_materia, id_materia_requerida)
 VALUES ($1, $2)
+RETURNING materia_id_materia, id_materia_requerida
 `
 
 type AddCorrelatividadParams struct {
@@ -19,8 +20,25 @@ type AddCorrelatividadParams struct {
 	IDMateriaRequerida int32 `json:"id_materia_requerida"`
 }
 
-func (q *Queries) AddCorrelatividad(ctx context.Context, arg AddCorrelatividadParams) error {
-	_, err := q.db.Exec(ctx, addCorrelatividad, arg.MateriaIDMateria, arg.IDMateriaRequerida)
+func (q *Queries) AddCorrelatividad(ctx context.Context, arg AddCorrelatividadParams) (CorrelatividadMaterium, error) {
+	row := q.db.QueryRow(ctx, addCorrelatividad, arg.MateriaIDMateria, arg.IDMateriaRequerida)
+	var i CorrelatividadMaterium
+	err := row.Scan(&i.MateriaIDMateria, &i.IDMateriaRequerida)
+	return i, err
+}
+
+const deleteCorrelatividad = `-- name: DeleteCorrelatividad :exec
+DELETE FROM correlatividad_materia
+WHERE materia_id_materia = $1 AND id_materia_requerida = $2
+`
+
+type DeleteCorrelatividadParams struct {
+	MateriaIDMateria   int32 `json:"materia_id_materia"`
+	IDMateriaRequerida int32 `json:"id_materia_requerida"`
+}
+
+func (q *Queries) DeleteCorrelatividad(ctx context.Context, arg DeleteCorrelatividadParams) error {
+	_, err := q.db.Exec(ctx, deleteCorrelatividad, arg.MateriaIDMateria, arg.IDMateriaRequerida)
 	return err
 }
 
@@ -54,4 +72,55 @@ func (q *Queries) GetCorrelativasDeMateria(ctx context.Context, materiaIDMateria
 		return nil, err
 	}
 	return items, nil
+}
+
+const listCorrelatividad = `-- name: ListCorrelatividad :many
+SELECT materia_id_materia, id_materia_requerida
+FROM correlatividad_materia
+`
+
+func (q *Queries) ListCorrelatividad(ctx context.Context) ([]CorrelatividadMaterium, error) {
+	rows, err := q.db.Query(ctx, listCorrelatividad)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []CorrelatividadMaterium
+	for rows.Next() {
+		var i CorrelatividadMaterium
+		if err := rows.Scan(&i.MateriaIDMateria, &i.IDMateriaRequerida); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const updateCorrelatividad = `-- name: UpdateCorrelatividad :one
+UPDATE correlatividad_materia
+SET materia_id_materia = $3, id_materia_requerida = $4
+WHERE materia_id_materia = $1 AND id_materia_requerida = $2
+RETURNING materia_id_materia, id_materia_requerida
+`
+
+type UpdateCorrelatividadParams struct {
+	MateriaIDMateria     int32 `json:"materia_id_materia"`
+	IDMateriaRequerida   int32 `json:"id_materia_requerida"`
+	MateriaIDMateria_2   int32 `json:"materia_id_materia_2"`
+	IDMateriaRequerida_2 int32 `json:"id_materia_requerida_2"`
+}
+
+func (q *Queries) UpdateCorrelatividad(ctx context.Context, arg UpdateCorrelatividadParams) (CorrelatividadMaterium, error) {
+	row := q.db.QueryRow(ctx, updateCorrelatividad,
+		arg.MateriaIDMateria,
+		arg.IDMateriaRequerida,
+		arg.MateriaIDMateria_2,
+		arg.IDMateriaRequerida_2,
+	)
+	var i CorrelatividadMaterium
+	err := row.Scan(&i.MateriaIDMateria, &i.IDMateriaRequerida)
+	return i, err
 }

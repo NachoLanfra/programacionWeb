@@ -11,32 +11,68 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const getProgresoUsuario = `-- name: GetProgresoUsuario :many
+const deleteUsuarioMateria = `-- name: DeleteUsuarioMateria :exec
+DELETE FROM usuario_materia
+WHERE usuario_id_usuario = $1 AND materia_id_materia = $2
+`
+
+type DeleteUsuarioMateriaParams struct {
+	UsuarioIDUsuario int32 `json:"usuario_id_usuario"`
+	MateriaIDMateria int32 `json:"materia_id_materia"`
+}
+
+func (q *Queries) DeleteUsuarioMateria(ctx context.Context, arg DeleteUsuarioMateriaParams) error {
+	_, err := q.db.Exec(ctx, deleteUsuarioMateria, arg.UsuarioIDUsuario, arg.MateriaIDMateria)
+	return err
+}
+
+const getProgresoUsuarioMateria = `-- name: GetProgresoUsuarioMateria :one
 SELECT m.id_materia, m.nombre, um.estado, um.nota
 FROM usuario_materia um
 JOIN materia m ON um.materia_id_materia = m.id_materia
-WHERE um.usuario_id_usuario = $1
+WHERE um.usuario_id_usuario = $1 AND um.materia_id_materia = $2
 `
 
-type GetProgresoUsuarioRow struct {
+type GetProgresoUsuarioMateriaParams struct {
+	UsuarioIDUsuario int32 `json:"usuario_id_usuario"`
+	MateriaIDMateria int32 `json:"materia_id_materia"`
+}
+
+type GetProgresoUsuarioMateriaRow struct {
 	IDMateria int32         `json:"id_materia"`
 	Nombre    string        `json:"nombre"`
 	Estado    string        `json:"estado"`
 	Nota      pgtype.Float4 `json:"nota"`
 }
 
-func (q *Queries) GetProgresoUsuario(ctx context.Context, usuarioIDUsuario int32) ([]GetProgresoUsuarioRow, error) {
-	rows, err := q.db.Query(ctx, getProgresoUsuario, usuarioIDUsuario)
+func (q *Queries) GetProgresoUsuarioMateria(ctx context.Context, arg GetProgresoUsuarioMateriaParams) (GetProgresoUsuarioMateriaRow, error) {
+	row := q.db.QueryRow(ctx, getProgresoUsuarioMateria, arg.UsuarioIDUsuario, arg.MateriaIDMateria)
+	var i GetProgresoUsuarioMateriaRow
+	err := row.Scan(
+		&i.IDMateria,
+		&i.Nombre,
+		&i.Estado,
+		&i.Nota,
+	)
+	return i, err
+}
+
+const listUsuarioMateria = `-- name: ListUsuarioMateria :many
+SELECT usuario_id_usuario, materia_id_materia, estado, nota FROM usuario_materia
+`
+
+func (q *Queries) ListUsuarioMateria(ctx context.Context) ([]UsuarioMaterium, error) {
+	rows, err := q.db.Query(ctx, listUsuarioMateria)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetProgresoUsuarioRow
+	var items []UsuarioMaterium
 	for rows.Next() {
-		var i GetProgresoUsuarioRow
+		var i UsuarioMaterium
 		if err := rows.Scan(
-			&i.IDMateria,
-			&i.Nombre,
+			&i.UsuarioIDUsuario,
+			&i.MateriaIDMateria,
 			&i.Estado,
 			&i.Nota,
 		); err != nil {
@@ -50,11 +86,10 @@ func (q *Queries) GetProgresoUsuario(ctx context.Context, usuarioIDUsuario int32
 	return items, nil
 }
 
-const setEstadoMateria = `-- name: SetEstadoMateria :exec
+const setEstadoMateria = `-- name: SetEstadoMateria :one
 INSERT INTO usuario_materia (usuario_id_usuario, materia_id_materia, estado, nota)
 VALUES ($1, $2, $3, $4)
-ON CONFLICT (usuario_id_usuario, materia_id_materia)
-DO UPDATE SET estado = EXCLUDED.estado, nota = EXCLUDED.nota
+RETURNING usuario_id_usuario, materia_id_materia, estado, nota
 `
 
 type SetEstadoMateriaParams struct {
@@ -64,12 +99,50 @@ type SetEstadoMateriaParams struct {
 	Nota             pgtype.Float4 `json:"nota"`
 }
 
-func (q *Queries) SetEstadoMateria(ctx context.Context, arg SetEstadoMateriaParams) error {
-	_, err := q.db.Exec(ctx, setEstadoMateria,
+func (q *Queries) SetEstadoMateria(ctx context.Context, arg SetEstadoMateriaParams) (UsuarioMaterium, error) {
+	row := q.db.QueryRow(ctx, setEstadoMateria,
 		arg.UsuarioIDUsuario,
 		arg.MateriaIDMateria,
 		arg.Estado,
 		arg.Nota,
 	)
-	return err
+	var i UsuarioMaterium
+	err := row.Scan(
+		&i.UsuarioIDUsuario,
+		&i.MateriaIDMateria,
+		&i.Estado,
+		&i.Nota,
+	)
+	return i, err
+}
+
+const updateUsuarioMateria = `-- name: UpdateUsuarioMateria :one
+UPDATE usuario_materia
+SET estado = $3, nota = $4
+WHERE usuario_id_usuario = $1 AND materia_id_materia = $2
+RETURNING usuario_id_usuario, materia_id_materia, estado, nota
+`
+
+type UpdateUsuarioMateriaParams struct {
+	UsuarioIDUsuario int32         `json:"usuario_id_usuario"`
+	MateriaIDMateria int32         `json:"materia_id_materia"`
+	Estado           string        `json:"estado"`
+	Nota             pgtype.Float4 `json:"nota"`
+}
+
+func (q *Queries) UpdateUsuarioMateria(ctx context.Context, arg UpdateUsuarioMateriaParams) (UsuarioMaterium, error) {
+	row := q.db.QueryRow(ctx, updateUsuarioMateria,
+		arg.UsuarioIDUsuario,
+		arg.MateriaIDMateria,
+		arg.Estado,
+		arg.Nota,
+	)
+	var i UsuarioMaterium
+	err := row.Scan(
+		&i.UsuarioIDUsuario,
+		&i.MateriaIDMateria,
+		&i.Estado,
+		&i.Nota,
+	)
+	return i, err
 }
