@@ -1,9 +1,15 @@
-.PHONY: all docker generate test
+.PHONY: all generate test clean docker
 
-all: docker generate
-
-docker:
-	docker compose up -d
+all: test
 
 generate:
-	sqlc generate
+    @sqlc generate
+
+docker:
+    @docker compose up -d
+
+test:
+    @./test.sh
+
+clean:
+    @docker compose down -v --remove-orphans
