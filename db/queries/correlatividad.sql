@@ -15,7 +15,7 @@ FROM correlatividad_materia;
 
 -- name: UpdateCorrelatividad :one
 UPDATE correlatividad_materia
-SET materia_id_materia = $3, id_materia_requerida = $4
+SET materia_id_materia = $3
 WHERE materia_id_materia = $1 AND id_materia_requerida = $2
 RETURNING *;
 
