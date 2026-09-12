@@ -135,10 +135,10 @@ func TestUsuarioCRUD(t *testing.T) {
 		)
 	}
 
-	if usuarioActualizado.Telefono != "2494111111" { // Si el numero de telefono no se actualiza
+	if usuarioActualizado.Telefono != "2235971111" { // Si el numero de telefono no se actualiza
 		t.Errorf(
 			"teléfono actualizado incorrecto: esperado %q, obtenido %q",
-			"2494111111",
+			"2235971111",
 			usuarioActualizado.Telefono,
 		)
 	}

@@ -26,7 +26,8 @@ func TestMateriaCRUD(t *testing.T) {
 	// CREATE
 	materia, err := queries.CreateMateria(ctx, sqlc.CreateMateriaParams{ // Probamos la querie
 		Nombre:       "Materia Test",
-		Departamento: "Computacion",
+		Anio:         4,
+		Cuatrimestre: 1,
 	})
 	if err != nil { // Si hay error, cortamos la ejecucion del test
 		t.Fatalf("error al crear materia: %v", err)
@@ -40,11 +41,19 @@ func TestMateriaCRUD(t *testing.T) {
 		)
 	}
 
-	if materia.Departamento != "Computacion" { // Si el departamento no se creo correctamente, tira error
+	if materia.Anio != 4 { // Si el año no se creo correctamente, tira error
 		t.Errorf(
-			"departamento incorrecto: esperado %q, obtenido %q",
-			"Computacion",
-			materia.Departamento,
+			"año incorrecto: esperado %d, obtenido %d",
+			4,
+			materia.Anio,
+		)
+	}
+
+	if materia.Cuatrimestre != 1 { // Si el cuatrimestre no se creo correctamente, tira error
+		t.Errorf(
+			"cuatrimestre incorrecto: esperado %d, obtenido %d",
+			1,
+			materia.Cuatrimestre,
 		)
 	}
 
@@ -78,11 +87,19 @@ func TestMateriaCRUD(t *testing.T) {
 		)
 	}
 
-	if materiaObtenida.Departamento != materia.Departamento { // Si los datos de departamento son incorrectos
+	if materiaObtenida.Anio != materia.Anio { // Si los datos de año son incorrectos
 		t.Errorf(
-			"departamento incorrecto: esperado %q, obtenido %q",
-			materia.Departamento,
-			materiaObtenida.Departamento,
+			"año incorrecto: esperado %d, obtenido %d",
+			materia.Anio,
+			materiaObtenida.Anio,
+		)
+	}
+
+	if materiaObtenida.Cuatrimestre != materia.Cuatrimestre { // Si los datos de cuatrimestre son incorrectos
+		t.Errorf(
+			"cuatrimestre incorrecto: esperado %d, obtenido %d",
+			materia.Cuatrimestre,
+			materiaObtenida.Cuatrimestre,
 		)
 	}
 
@@ -110,7 +127,8 @@ func TestMateriaCRUD(t *testing.T) {
 	materiaActualizada, err := queries.UpdateMateria(ctx, sqlc.UpdateMateriaParams{ // Usamos la querie y actualizamos los datos
 		IDMateria:    materia.IDMateria,
 		Nombre:       "Materia Test Actualizada",
-		Departamento: "Sistemas",
+		Anio:         5,
+		Cuatrimestre: 2,
 	})
 
 	if err != nil { // Si hay error al usar la querie
@@ -125,11 +143,19 @@ func TestMateriaCRUD(t *testing.T) {
 		)
 	}
 
-	if materiaActualizada.Departamento != "Sistemas" { // Si el departamento no se actualiza
+	if materiaActualizada.Anio != 5 { // Si el año no se actualiza
 		t.Errorf(
-			"departamento actualizado incorrecto: esperado %q, obtenido %q",
-			"Sistemas",
-			materiaActualizada.Departamento,
+			"año actualizado incorrecto: esperado %d, obtenido %d",
+			5,
+			materiaActualizada.Anio,
+		)
+	}
+
+	if materiaActualizada.Cuatrimestre != 2 { // Si el cuatrimestre no se actualiza
+		t.Errorf(
+			"cuatrimestre actualizado incorrecto: esperado %d, obtenido %d",
+			2,
+			materiaActualizada.Cuatrimestre,
 		)
 	}
 
@@ -143,7 +169,7 @@ func TestMateriaCRUD(t *testing.T) {
 	_, err = queries.GetMateriaByID(ctx, materia.IDMateria) // Intentamos obtener la materia eliminada para verificar que ya no exista
 	if err != pgx.ErrNoRows {
 		t.Errorf(
-			"se esperaba pgx.ErrNoRows despuÃ©s de eliminar la materia, obtenido: %v",
+			"se esperaba pgx.ErrNoRows después de eliminar la materia, obtenido: %v",
 			err,
 		)
 	}
