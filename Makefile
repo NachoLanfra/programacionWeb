@@ -1,3 +1,6 @@
+-include .env
+export
+
 APP_NAME := programacion-web 
 
 .PHONY: all generate build test clean docker

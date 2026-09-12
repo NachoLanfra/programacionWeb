@@ -3,23 +3,24 @@ package test
 import (
 	"context"
 	"testing"
-
 	"github.com/jackc/pgx/v5"
-
 	"ejerEsp.com/ejerEsp/db/sqlc"
 )
 
 func TestMateriaCRUD(t *testing.T) {
 	ctx := context.Background()
-
+	dbUrl := getTestDBUrl()
 	conn, err := pgx.Connect(
 		ctx,
-		"postgres://postgres:postgres@localhost:5432/programacion_web",
+		dbUrl,
 	)
 	if err != nil {
 		t.Fatalf("no se pudo conectar a PostgreSQL: %v", err)
 	}
-	defer conn.Close(ctx)
+	
+	t.Cleanup(func() {
+			conn.Close(ctx)
+	})
 
 	queries := sqlc.New(conn)
 

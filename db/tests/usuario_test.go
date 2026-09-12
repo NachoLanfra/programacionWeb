@@ -3,23 +3,36 @@ package test
 import (
 	"context"
 	"testing"
-
 	"github.com/jackc/pgx/v5"
-
+	"fmt"
+    "os"
 	"ejerEsp.com/ejerEsp/db/sqlc"
 )
 
+
+func getTestDBUrl() string {
+    user := os.Getenv("POSTGRES_USER")
+    pass := os.Getenv("POSTGRES_PASSWORD")
+    db   := os.Getenv("POSTGRES_DB")
+    
+    return fmt.Sprintf("postgres://%s:%s@localhost:5432/%s?sslmode=disable", user, pass, db)
+}
+
+
 func TestUsuarioCRUD(t *testing.T) {
 	ctx := context.Background()
-
+	dbUrl := getTestDBUrl()
 	conn, err := pgx.Connect(
 		ctx,
-		"postgres://postgres:postgres@localhost:5432/programacion_web",
+		dbUrl,
 	)
 	if err != nil {
 		t.Fatalf("no se pudo conectar a PostgreSQL: %v", err)
 	}
-	defer conn.Close(ctx)
+	
+	t.Cleanup(func() {
+			conn.Close(ctx)
+	})
 
 	queries := sqlc.New(conn) 
 

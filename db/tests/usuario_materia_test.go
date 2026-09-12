@@ -3,28 +3,29 @@ package test
 import (
 	"context"
 	"testing"
-
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
-
 	"ejerEsp.com/ejerEsp/db/sqlc"
 )
 
 func TestUsuarioMateriaCRUD(t *testing.T) {
 	ctx := context.Background()
-
+	dbUrl := getTestDBUrl()
 	conn, err := pgx.Connect(
 		ctx,
-		"postgres://postgres:postgres@localhost:5432/programacion_web",
+		dbUrl,
 	)
 	if err != nil {
 		t.Fatalf("no se pudo conectar a PostgreSQL: %v", err)
 	}
-	defer conn.Close(ctx)
+	
+	t.Cleanup(func() {
+			conn.Close(ctx)
+	})
 
-	queries := sqlc.New(conn)
+	queries := sqlc.New(conn) 
 
-	// PREPARACION: Creamos un usuario y una materia necesarios para la clave foránea
+	// PREPARACION
 	usuario, err := queries.CreateUsuario(ctx, sqlc.CreateUsuarioParams{
 		NombreApellido: "Usuario Relacion Test",
 		Email:          "relacion.test@example.com",
