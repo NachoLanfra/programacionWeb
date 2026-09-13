@@ -140,7 +140,7 @@ el ciclo CRUD completo de cada entidad usando el paquete `testing` de Go:
 - `usuario_test.go`: alta, lectura, listado, actualización y baja de usuarios.
 - `materia_test.go`: alta, lectura, listado, actualización y baja de materias.
 - `usuario_materia_test.go`: asociación de un usuario a una materia (estado y nota), lectura del progreso, actualización y baja.
-- `correlatividad_materia_test.go`: alta de correlatividades entre materias, listado, actualización y baja, incluyendo la verificación del borrado en cascada.
+- `correlatividad_materia_test.go`: alta de correlatividades entre materias, obtención de las correlativas de una materia, listado, actualización y baja.
 
 Cada test limpia los datos que crea (`t.Cleanup`), y además `test.sh` baja el
 volumen de Postgres al finalizar, así que cada corrida de `make test` arranca

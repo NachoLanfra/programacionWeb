@@ -2,31 +2,29 @@ package test
 
 import (
 	"context"
-	"testing"
-	"github.com/jackc/pgx/v5"
-	"fmt"
-    "os"
 	"ejerEsp.com/ejerEsp/db/sqlc"
+	"fmt"
+	"github.com/jackc/pgx/v5"
+	"os"
+	"testing"
 )
 
-
 func getEnvOrDefault(key, def string) string { // Busca una variable de entorno. Si no existe, devuelve un valor por defecto.
-    if v := os.Getenv(key); v != "" { // os.Getenv devuelve "" si la variable no está seteada
-        return v
-    }
-    return def
+	if v := os.Getenv(key); v != "" { // os.Getenv devuelve "" si la variable no está seteada
+		return v
+	}
+	return def
 }
 
 func getTestDBUrl() string {
 	// Si no hay .env (por ejemplo, recién clonado el repo),
-	// uso los mismos valores por default que docker-compose.yml, para tan solo hacer make test y que ande. 
-    user := getEnvOrDefault("POSTGRES_USER", "postgres")
-    pass := getEnvOrDefault("POSTGRES_PASSWORD", "postgres")
-    db   := getEnvOrDefault("POSTGRES_DB", "programacion_web")
+	// uso los mismos valores por default que docker-compose.yml, para tan solo hacer make test y que ande.
+	user := getEnvOrDefault("POSTGRES_USER", "postgres")
+	pass := getEnvOrDefault("POSTGRES_PASSWORD", "postgres")
+	db := getEnvOrDefault("POSTGRES_DB", "programacion_web")
 
-    return fmt.Sprintf("postgres://%s:%s@localhost:5432/%s?sslmode=disable", user, pass, db)
+	return fmt.Sprintf("postgres://%s:%s@localhost:5432/%s?sslmode=disable", user, pass, db)
 }
-
 
 func TestUsuarioCRUD(t *testing.T) {
 	ctx := context.Background()
@@ -38,12 +36,12 @@ func TestUsuarioCRUD(t *testing.T) {
 	if err != nil {
 		t.Fatalf("no se pudo conectar a PostgreSQL: %v", err)
 	}
-	
+
 	t.Cleanup(func() {
-			conn.Close(ctx)
+		conn.Close(ctx)
 	})
 
-	queries := sqlc.New(conn) 
+	queries := sqlc.New(conn)
 
 	// CREATE
 	usuario, err := queries.CreateUsuario(ctx, sqlc.CreateUsuarioParams{ // Probamos la querie
@@ -80,8 +78,8 @@ func TestUsuarioCRUD(t *testing.T) {
 
 	// GET
 	usuarioObtenido, err := queries.GetUsuarioByID(ctx, usuario.IDUsuario) // Usamos la querie
-	
-	if err != nil {  // Si hay error al usar la querie
+
+	if err != nil { // Si hay error al usar la querie
 		t.Fatalf("error al obtener usuario: %v", err)
 	}
 
@@ -111,7 +109,7 @@ func TestUsuarioCRUD(t *testing.T) {
 
 	// LIST
 	usuarios, err := queries.ListUsuarios(ctx) // Usamos la querie
-	
+
 	if err != nil { // Si falla la querie
 		t.Fatalf("error al listar usuarios: %v", err)
 	}
@@ -136,7 +134,7 @@ func TestUsuarioCRUD(t *testing.T) {
 		Email:          "usuario.actualizado@example.com",
 		Telefono:       "2235971111",
 	})
-	
+
 	if err != nil { // Si hay error al usar la querie
 		t.Fatalf("error al actualizar usuario: %v", err)
 	}
@@ -167,7 +165,7 @@ func TestUsuarioCRUD(t *testing.T) {
 
 	// DELETE
 	err = queries.DeleteUsuario(ctx, usuario.IDUsuario) // Usamos la querie
-	
+
 	if err != nil { // Error al eliminar
 		t.Fatalf("error al eliminar usuario: %v", err)
 	}
