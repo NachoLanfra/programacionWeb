@@ -15,6 +15,16 @@ el progreso de cada usuario en cada materia, y las correlatividades entre materi
 - [Go 1.22+](https://go.dev/dl/)
 - [sqlc](https://docs.sqlc.dev/en/latest/overview/install.html) instalado y disponible en el `PATH`
 
+> **Importante:** el daemon de Docker tiene que estar corriendo antes de
+> ejecutar `make test`. En Linux con systemd, iniciarlo con:
+> ```bash
+> sudo systemctl start docker
+> ```
+> Podés verificar que esté activo con `docker info` (si devuelve
+> información del sistema en vez de un error de conexión, está listo).
+> En macOS/Windows con Docker Desktop, alcanza con abrir la aplicación y
+> esperar a que quede en estado "running".
+
 ## Cómo ejecutar los tests
 
 Todo el flujo de testing (levantar la base, generar el código, compilar,
