@@ -116,6 +116,21 @@ intermedias, evitando referencias huérfanas.
 - La conexión se arma con una cadena `postgres://usuario:password@host:puerto/basededatos`,
   usando las variables de entorno descriptas arriba.
 
+### Nota sobre las credenciales de la base
+
+`.env.example` está vacío a propósito: **no hace falta completarlo ni crear
+un `.env`** para correr el proyecto. Alcanza con `make test`, tal como pide
+la consigna. Si no existe `.env` (o las variables quedan vacías), tanto
+`docker-compose.yml` como los tests en Go caen a los mismos valores por
+default (`postgres` / `postgres` / `programacion_web`), pensados
+exclusivamente para que el flujo de test funcione sin pasos manuales.
+
+Esto es válido solo para este entorno de test, que se crea y se borra en
+cada corrida y no tiene datos reales. En un proyecto real no se harían
+así las cosas: no dejaríamos credenciales por default ni en el código ni
+en el `docker-compose.yml`, y la aplicación debería fallar si falta
+alguna, en vez de arrancar igual con un valor por defecto.
+
 ### Tests de persistencia
 
 Los tests en `db/tests/` son **tests de integración**: se conectan a una base

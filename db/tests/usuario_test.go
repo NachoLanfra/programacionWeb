@@ -10,11 +10,20 @@ import (
 )
 
 
+func getEnvOrDefault(key, def string) string { // Busca una variable de entorno. Si no existe, devuelve un valor por defecto.
+    if v := os.Getenv(key); v != "" { // os.Getenv devuelve "" si la variable no está seteada
+        return v
+    }
+    return def
+}
+
 func getTestDBUrl() string {
-    user := os.Getenv("POSTGRES_USER")
-    pass := os.Getenv("POSTGRES_PASSWORD")
-    db   := os.Getenv("POSTGRES_DB")
-    
+	// Si no hay .env (por ejemplo, recién clonado el repo),
+	// uso los mismos valores por default que docker-compose.yml, para tan solo hacer make test y que ande. 
+    user := getEnvOrDefault("POSTGRES_USER", "postgres")
+    pass := getEnvOrDefault("POSTGRES_PASSWORD", "postgres")
+    db   := getEnvOrDefault("POSTGRES_DB", "programacion_web")
+
     return fmt.Sprintf("postgres://%s:%s@localhost:5432/%s?sslmode=disable", user, pass, db)
 }
 
