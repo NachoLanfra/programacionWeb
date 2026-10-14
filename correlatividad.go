@@ -6,18 +6,18 @@ import (
 	"ejerEsp.com/ejerEsp/db/sqlc"
 )
 
-// correlativaInput es el JSON de POST /materias/{id}/correlativas:
-// la materia {id} pasa a requerir tener aprobada "materia_requerida_id".
 type correlativaInput struct {
 	MateriaRequeridaID int32 `json:"materia_requerida_id"`
+}
+
+type updateCorrelativaInput struct {
+	NuevaMateriaID   int32 `json:"nueva_materia_id"`
+	MateriaIDMateria int32 `json:"materia_id_materia"`
 }
 
 const correlativaNotFound = "esa correlatividad no existe"
 
 // POST /materias/{id}/correlativas
-//
-// La relación no tiene atributos que se puedan modificar (es solo un par de
-// materias), por eso no hay PUT: para "cambiarla" se borra y se vuelve a crear.
 func (s *Server) createCorrelativa(w http.ResponseWriter, r *http.Request) {
 	id, ok := pathID(w, r, "id")
 	if !ok {
@@ -69,7 +69,6 @@ func (s *Server) createCorrelativa(w http.ResponseWriter, r *http.Request) {
 }
 
 // GET /materias/{id}/correlativas
-// Devuelve las materias que hay que tener aprobadas para cursar la materia {id}.
 func (s *Server) listCorrelativas(w http.ResponseWriter, r *http.Request) {
 	id, ok := pathID(w, r, "id")
 	if !ok {
@@ -85,6 +84,118 @@ func (s *Server) listCorrelativas(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, orEmpty(ms))
+}
+
+// GET /materias/{id}/correlativas/{requeridaId}
+func (s *Server) getCorrelativa(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathID(w, r, "id")
+	if !ok {
+		return
+	}
+	requeridaID, ok := pathID(w, r, "requeridaId")
+	if !ok {
+		return
+	}
+
+	if _, err := s.queries.GetMateriaByID(r.Context(), id); err != nil {
+		dbError(w, err, "materia no encontrada")
+		return
+	}
+
+	correlativas, err := s.queries.GetCorrelativasDeMateria(r.Context(), id)
+	if err != nil {
+		dbError(w, err, correlativaNotFound)
+		return
+	}
+
+	for _, c := range correlativas {
+		if c.IDMateria == requeridaID {
+			writeJSON(w, http.StatusOK, c)
+			return
+		}
+	}
+
+	writeError(w, http.StatusNotFound, correlativaNotFound)
+}
+
+// PUT /materias/{id}/correlativas/{requeridaId}
+func (s *Server) updateCorrelativa(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathID(w, r, "id")
+	if !ok {
+		return
+	}
+	requeridaID, ok := pathID(w, r, "requeridaId")
+	if !ok {
+		return
+	}
+
+	var in updateCorrelativaInput
+	if !decodeJSON(w, r, &in) {
+		return
+	}
+
+	nuevaMateriaID := in.NuevaMateriaID
+	if nuevaMateriaID <= 0 {
+		nuevaMateriaID = in.MateriaIDMateria
+	}
+
+	switch {
+	case nuevaMateriaID <= 0:
+		writeValidation(w, map[string]string{"nueva_materia_id": "es obligatorio y debe ser un entero positivo"})
+		return
+	case nuevaMateriaID == requeridaID:
+		writeValidation(w, map[string]string{"nueva_materia_id": "una materia no puede ser correlativa de sí misma"})
+		return
+	}
+
+	// Verificar existencia de la nueva materia
+	if _, err := s.queries.GetMateriaByID(r.Context(), nuevaMateriaID); err != nil {
+		dbError(w, err, "la nueva materia no existe")
+		return
+	}
+
+	// Verificar existencia de la correlatividad original
+	correlativas, err := s.queries.GetCorrelativasDeMateria(r.Context(), id)
+	if err != nil {
+		dbError(w, err, correlativaNotFound)
+		return
+	}
+	encontrada := false
+	for _, c := range correlativas {
+		if c.IDMateria == requeridaID {
+			encontrada = true
+			break
+		}
+	}
+	if !encontrada {
+		writeError(w, http.StatusNotFound, correlativaNotFound)
+		return
+	}
+
+	// Evitar ciclos con la nueva materia
+	correlativasInversas, err := s.queries.GetCorrelativasDeMateria(r.Context(), requeridaID)
+	if err != nil {
+		dbError(w, err, "")
+		return
+	}
+	for _, c := range correlativasInversas {
+		if c.IDMateria == nuevaMateriaID {
+			writeError(w, http.StatusConflict, "la actualización formaría un ciclo de correlatividad")
+			return
+		}
+	}
+
+	actualizada, err := s.queries.UpdateCorrelatividad(r.Context(), sqlc.UpdateCorrelatividadParams{
+		MateriaIDMateria:   id,
+		IDMateriaRequerida: requeridaID,
+		MateriaIDMateria_2: nuevaMateriaID,
+	})
+	if err != nil {
+		dbError(w, err, correlativaNotFound)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, actualizada)
 }
 
 // DELETE /materias/{id}/correlativas/{requeridaId}
@@ -123,4 +234,14 @@ func (s *Server) deleteCorrelativa(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// GET /correlatividades
+func (s *Server) listTodasCorrelatividades(w http.ResponseWriter, r *http.Request) {
+	todas, err := s.queries.ListCorrelatividad(r.Context())
+	if err != nil {
+		dbError(w, err, "")
+		return
+	}
+	writeJSON(w, http.StatusOK, orEmpty(todas))
 }

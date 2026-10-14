@@ -72,8 +72,11 @@ func main() {
 	mux.HandleFunc("DELETE /materias/{id}", srv.eliminarMateria)
 
 	// API de Correlatividades de Materia
+	mux.HandleFunc("GET /correlatividades", srv.listTodasCorrelatividades)
 	mux.HandleFunc("POST /materias/{id}/correlativas", srv.createCorrelativa)
 	mux.HandleFunc("GET /materias/{id}/correlativas", srv.listCorrelativas)
+	mux.HandleFunc("GET /materias/{id}/correlativas/{requeridaId}", srv.getCorrelativa)
+	mux.HandleFunc("PUT /materias/{id}/correlativas/{requeridaId}", srv.updateCorrelativa)
 	mux.HandleFunc("DELETE /materias/{id}/correlativas/{requeridaId}", srv.deleteCorrelativa)
 
 	// API de Usuario
