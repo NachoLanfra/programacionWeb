@@ -2,9 +2,24 @@ package main
 
 import (
 	"net/http"
+	"strings"
 
 	"ejerEsp.com/ejerEsp/db/sqlc"
 )
+
+func validateMateriaInput(nombre string, anio, cuatrimestre int32) map[string]string {
+	errs := map[string]string{}
+	if strings.TrimSpace(nombre) == "" {
+		errs["nombre"] = "es obligatorio"
+	}
+	if anio < 1 || anio > 5 {
+		errs["anio"] = "debe ser entre 1 y 5"
+	}
+	if cuatrimestre < 1 || cuatrimestre > 2 {
+		errs["cuatrimestre"] = "debe ser 1 o 2"
+	}
+	return errs
+}
 
 // POST /materias
 func (s *Server) crearMateria(w http.ResponseWriter, r *http.Request) {
@@ -13,10 +28,9 @@ func (s *Server) crearMateria(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if params.Nombre == "" || params.Anio <= 0 || params.Cuatrimestre <= 0 {
-		writeValidation(w, map[string]string{
-			"campos": "nombre, anio y cuatrimestre son obligatorios y deben ser enteros positivos",
-		})
+	params.Nombre = strings.TrimSpace(params.Nombre)
+	if errs := validateMateriaInput(params.Nombre, params.Anio, params.Cuatrimestre); len(errs) > 0 {
+		writeValidation(w, errs)
 		return
 	}
 
@@ -72,10 +86,9 @@ func (s *Server) actualizarMateria(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Nombre == "" || req.Anio <= 0 || req.Cuatrimestre <= 0 {
-		writeValidation(w, map[string]string{
-			"campos": "nombre, anio y cuatrimestre son obligatorios y deben ser enteros positivos",
-		})
+	req.Nombre = strings.TrimSpace(req.Nombre)
+	if errs := validateMateriaInput(req.Nombre, req.Anio, req.Cuatrimestre); len(errs) > 0 {
+		writeValidation(w, errs)
 		return
 	}
 

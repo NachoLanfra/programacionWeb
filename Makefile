@@ -3,7 +3,7 @@ export
 
 APP_NAME := programacion-web 
 
-.PHONY: all generate build test clean docker db-up db-down run
+.PHONY: all generate build test test-api clean docker db-up db-down run
 
 db-up:
 	@docker compose up -d
@@ -30,6 +30,9 @@ build:
 
 test:
 	@./test.sh
+
+test-api:
+	@./test-api.sh
 
 clean:
 	@docker compose down -v --remove-orphans

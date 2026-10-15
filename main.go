@@ -24,7 +24,7 @@ func getEnvOrDefault(key, def string) string {
 
 func main() {
 
-	// 1. Config
+	// Config
 	user := getEnvOrDefault("POSTGRES_USER", "postgres")
 	pass := getEnvOrDefault("POSTGRES_PASSWORD", "")
 	name := getEnvOrDefault("POSTGRES_DB", "plan_estudios")
@@ -39,7 +39,7 @@ func main() {
 	}
 	dsn := u.String()
 
-	// 2. Pool
+	// Pool
 	ctx := context.Background()
 	pool, err := pgxpool.New(ctx, dsn)
 	if err != nil {
@@ -47,17 +47,22 @@ func main() {
 	}
 	defer pool.Close()
 
-	// 3. Verificar conexión
+	// Verificar conexión
 	if err := pool.Ping(ctx); err != nil {
 		log.Fatalf("no se pudo conectar a la base: %v", err)
 	}
 	log.Println("Conectado a la base de datos")
 
-	// 4. Server con las queries de sqlc
+	// Server con las queries de sqlc
 	srv := &Server{queries: sqlc.New(pool)}
 
-	// 5. Rutas
+	// Rutas
 	mux := http.NewServeMux()
+
+	// Health check
+	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	})
 
 	// Servidor de estáticos
 	staticDir := "./static"
@@ -93,7 +98,7 @@ func main() {
 	mux.HandleFunc("PUT /usuarios/{id}/materias/{materiaId}", srv.updateUsuarioMateria)
 	mux.HandleFunc("DELETE /usuarios/{id}/materias/{materiaId}", srv.deleteUsuarioMateria)
 
-	// 6. Arrancar
+	// Arrancar
 	serverPort := ":8080"
 	log.Printf("Servidor escuchando en %s", serverPort)
 	if err := http.ListenAndServe(serverPort, mux); err != nil {

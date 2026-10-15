@@ -6,12 +6,13 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
-// writeJSON envía una respuesta HTTP con código de estado y cuerpo en formato JSON.
+// writeJSON envía una respuesta HTTP con código de estado y cuerpo en formato JSON
 func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
@@ -20,12 +21,12 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 	}
 }
 
-// writeError envía un error genérico formateado como {"error": msg}.
+// writeError envía un error genérico formateado como {"error": msg}
 func writeError(w http.ResponseWriter, status int, msg string) {
 	writeJSON(w, status, map[string]string{"error": msg})
 }
 
-// writeValidation responde con 400 Bad Request y el mapa de errores por campo.
+// writeValidation responde con 400 Bad Request y el mapa de errores por campo
 func writeValidation(w http.ResponseWriter, errs map[string]string) {
 	writeJSON(w, http.StatusBadRequest, map[string]any{
 		"error":  "error de validación",
@@ -33,16 +34,18 @@ func writeValidation(w http.ResponseWriter, errs map[string]string) {
 	})
 }
 
-// decodeJSON decodifica el cuerpo de la petición en la estructura destino.
+// decodeJSON decodifica el cuerpo de la petición en la estructura destino
 func decodeJSON(w http.ResponseWriter, r *http.Request, dst any) bool {
-	if err := json.NewDecoder(r.Body).Decode(dst); err != nil {
-		writeError(w, http.StatusBadRequest, "cuerpo JSON inválido")
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(dst); err != nil {
+		writeError(w, http.StatusBadRequest, "cuerpo JSON inválido o contiene campos desconocidos")
 		return false
 	}
 	return true
 }
 
-// pathID extrae y valida un parámetro numérico positivo de la ruta (Go 1.22+).
+// pathID extrae y valida un parámetro numérico positivo de la ruta
 func pathID(w http.ResponseWriter, r *http.Request, key string) (int32, bool) {
 	val := r.PathValue(key)
 	id, err := strconv.ParseInt(val, 10, 32)
@@ -53,12 +56,12 @@ func pathID(w http.ResponseWriter, r *http.Request, key string) (int32, bool) {
 	return int32(id), true
 }
 
-// itoa convierte un int32 a string.
+// itoa convierte un int32 a string
 func itoa(n int32) string {
 	return strconv.FormatInt(int64(n), 10)
 }
 
-// orEmpty retorna un slice vacío no-nil si el original era nil, evitando devolver "null" en JSON.
+// orEmpty retorna un slice vacío no-nil si el original era nil, evitando devolver "null" en JSON
 func orEmpty[T any](s []T) []T {
 	if s == nil {
 		return []T{}
@@ -67,10 +70,10 @@ func orEmpty[T any](s []T) []T {
 }
 
 // dbError traduce errores de base de datos a códigos de estado HTTP apropiados:
-// - pgx.ErrNoRows -> 404 Not Found
-// - Código 23505 (unique_violation / duplicado de clave) -> 409 Conflict
-// - Código 23503 (foreign_key_violation / clave foránea inválida) -> 422 Unprocessable Entity
-// - Cualquier otro error -> 500 Internal Server Error
+// pgx.ErrNoRows 404 Not Found
+// Código 23505 (duplicado de clave) 409 Conflict
+// Código 23503 (clave foránea inválida) 422 Unprocessable Entity
+// Cualquier otro error 500 Internal Server Error
 func dbError(w http.ResponseWriter, err error, notFoundMsg string) {
 	if errors.Is(err, pgx.ErrNoRows) {
 		if notFoundMsg == "" {
@@ -83,10 +86,14 @@ func dbError(w http.ResponseWriter, err error, notFoundMsg string) {
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) {
 		switch pgErr.Code {
-		case "23505": // unique_violation
-			writeError(w, http.StatusConflict, "el recurso ya existe o entra en conflicto con un registro existente")
+		case "23505":
+			msg := "el recurso ya existe o entra en conflicto con un registro existente"
+			if strings.Contains(strings.ToLower(pgErr.Detail), "email") || strings.Contains(strings.ToLower(pgErr.ConstraintName), "email") {
+				msg = "el email ya está registrado"
+			}
+			writeError(w, http.StatusConflict, msg)
 			return
-		case "23503": // foreign_key_violation
+		case "23503":
 			writeError(w, http.StatusUnprocessableEntity, "referencia a un recurso inexistente o inválido")
 			return
 		}
@@ -95,4 +102,3 @@ func dbError(w http.ResponseWriter, err error, notFoundMsg string) {
 	log.Printf("error de base de datos no controlado: %v", err)
 	writeError(w, http.StatusInternalServerError, "error interno del servidor")
 }
-
