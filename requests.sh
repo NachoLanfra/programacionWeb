@@ -190,7 +190,7 @@ check "registra una materia aprobada con nota" 201 '"nota":8.5'
 
 section "Progreso: GET, PUT y DELETE"
 request GET "/usuarios/$USUARIO_ID/materias"
-check "lista el progreso del usuario" 200 'Programación Web'
+check "lista el progreso del usuario" 200 "\"materia_id_materia\":$MATERIA_ID"
 
 request GET "/usuarios/$USUARIO_ID/materias/$MATERIA_ID"
 check "obtiene el progreso en una materia" 200 '"estado":"cursando"'

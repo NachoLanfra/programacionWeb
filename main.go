@@ -26,8 +26,8 @@ func main() {
 
 	// Config
 	user := getEnvOrDefault("POSTGRES_USER", "postgres")
-	pass := getEnvOrDefault("POSTGRES_PASSWORD", "")
-	name := getEnvOrDefault("POSTGRES_DB", "plan_estudios")
+	pass := getEnvOrDefault("POSTGRES_PASSWORD", "postgres")
+	name := getEnvOrDefault("POSTGRES_DB", "programacion_web")
 	host := getEnvOrDefault("DB_HOST", "localhost")
 	dbPort := getEnvOrDefault("DB_PORT", "5432")
 
@@ -67,7 +67,7 @@ func main() {
 	// Servidor de estáticos
 	staticDir := "./static"
 	fileServer := http.FileServer(http.Dir(staticDir))
-	mux.Handle("/", fileServer)
+	mux.Handle("GET /", fileServer)
 
 	// API de Materia
 	mux.HandleFunc("POST /materias", srv.crearMateria)
