@@ -9,15 +9,15 @@ import (
 	"ejerEsp.com/ejerEsp/db/sqlc"
 )
 
-// usuarioInput es el JSON que reciben POST /usuarios y PUT /usuarios/{id}.
+// usuarioInput es el JSON que reciben POST /usuarios y PUT /usuarios/{id}
 type usuarioInput struct {
 	NombreApellido string `json:"nombre_apellido"`
 	Email          string `json:"email"`
 	Telefono       string `json:"telefono"`
 }
 
-// validate normaliza (recorta espacios) y devuelve los errores por campo.
-// Los límites de longitud coinciden con las columnas VARCHAR del esquema.
+// validate normaliza (recorta espacios) y devuelve los errores por campo
+// Los límites de longitud coinciden con las columnas VARCHAR del esquema
 func (in *usuarioInput) validate() map[string]string {
 	in.NombreApellido = strings.TrimSpace(in.NombreApellido)
 	in.Email = strings.TrimSpace(in.Email)
@@ -51,8 +51,7 @@ func (in *usuarioInput) validate() map[string]string {
 	return errs
 }
 
-// validEmail acepta solo direcciones simples "local@dominio" (sin nombre
-// visible tipo "Juan <juan@x.com>").
+// validEmail acepta solo direcciones simples "local@dominio" (sin nombre visible tipo "Juan <juan@x.com>")
 func validEmail(s string) bool {
 	addr, err := mail.ParseAddress(s)
 	return err == nil && addr.Address == s && strings.Contains(s[strings.LastIndex(s, "@"):], ".")
@@ -135,8 +134,7 @@ func (s *Server) updateUsuario(w http.ResponseWriter, r *http.Request) {
 }
 
 // DELETE /usuarios/{id}
-// DeleteUsuario no falla si el id no existe, así que primero lo buscamos
-// para poder responder 404 en ese caso.
+// DeleteUsuario no falla si el id no existe, así que primero lo buscamos para poder responder 404 en ese caso
 func (s *Server) deleteUsuario(w http.ResponseWriter, r *http.Request) {
 	id, ok := pathID(w, r, "id")
 	if !ok {

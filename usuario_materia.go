@@ -8,7 +8,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-// Estados válidos de cursada de un alumno en una materia.
+// Estados válidos de cursada de un alumno en una materia
 var estadosValidos = map[string]bool{
 	"sin_cursar":  true,
 	"cursando":    true,
@@ -21,14 +21,14 @@ const (
 	notaMax = 10
 )
 
-// usuarioMateriaUpdate es el JSON de PUT /usuarios/{id}/materias/{materiaId}.
-// La nota es opcional (null o ausente = sin nota).
+// usuarioMateriaUpdate es el JSON de PUT /usuarios/{id}/materias/{materiaId}
+// La nota es opcional (null o ausente = sin nota)
 type usuarioMateriaUpdate struct {
 	Estado string   `json:"estado"`
 	Nota   *float32 `json:"nota"`
 }
 
-// usuarioMateriaCreate es el JSON de POST /usuarios/{id}/materias.
+// usuarioMateriaCreate es el JSON de POST /usuarios/{id}/materias
 type usuarioMateriaCreate struct {
 	MateriaID int32 `json:"materia_id"`
 	usuarioMateriaUpdate
@@ -58,7 +58,7 @@ func (in *usuarioMateriaCreate) validate() map[string]string {
 	return errs
 }
 
-// nota convierte el *float32 opcional del JSON al tipo nullable de pgx.
+// nota convierte el *float32 opcional del JSON al tipo nullable de pgx
 func (in *usuarioMateriaUpdate) nota() pgtype.Float4 {
 	if in.Nota == nil {
 		return pgtype.Float4{}
@@ -87,8 +87,8 @@ func (s *Server) createUsuarioMateria(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Si la materia no existe, la FK falla y dbError responde 422.
-	// Si el usuario ya tiene esa materia, la PK falla y dbError responde 409.
+	// Si la materia no existe, la FK falla y dbError responde 422
+	// Si el usuario ya tiene esa materia, la PK falla y dbError responde 409
 	if _, err := s.queries.SetEstadoMateria(r.Context(), sqlc.SetEstadoMateriaParams{
 		UsuarioIDUsuario: usuarioID,
 		MateriaIDMateria: in.MateriaID,
@@ -222,4 +222,3 @@ func (s *Server) deleteUsuarioMateria(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
-
