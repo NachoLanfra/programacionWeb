@@ -129,28 +129,6 @@ Los errores devuelven `{"error": "mensaje"}`; las validaciones agregan el detall
 | 422    | El cuerpo referencia algo que no existe (por ejemplo, una `materia_id` inexistente).                     |
 | 500    | Error interno (se registra en el log del servidor sin exponer detalles al cliente).                      |
 
-### Ejemplos con curl
-
-```bash
-# Crear (201) -> devuelve el objeto creado y el header Location
-curl -i -X POST localhost:8080/usuarios -H 'Content-Type: application/json' \
-  -d '{"nombre_apellido":"Ana Pérez","email":"ana@example.com","telefono":"2494111111"}'
-
-curl localhost:8080/usuarios                       # listar
-curl localhost:8080/usuarios/1                     # obtener (404 si no existe)
-curl -X PUT localhost:8080/usuarios/1 -H 'Content-Type: application/json' \
-  -d '{"nombre_apellido":"Ana M. Pérez","email":"ana@example.com","telefono":"2494222222"}'
-curl -i -X DELETE localhost:8080/usuarios/1        # 204 No Content
-
-curl -X POST localhost:8080/materias -H 'Content-Type: application/json' \
-  -d '{"nombre":"Programación Web","anio":4,"cuatrimestre":1}'
-
-# Progreso del usuario 1 en la materia 1, y correlatividad (la materia 2 requiere la 1)
-curl -X POST localhost:8080/usuarios/1/materias -H 'Content-Type: application/json' \
-  -d '{"materia_id":1,"estado":"aprobada","nota":8.5}'
-curl -X POST localhost:8080/materias/2/correlativas -H 'Content-Type: application/json' \
-  -d '{"materia_requerida_id":1}'
-```
 
 `requests.sh` contiene las peticiones probadas de cada endpoint principal, con casos válidos e inválidos.
 
@@ -158,13 +136,6 @@ curl -X POST localhost:8080/materias/2/correlativas -H 'Content-Type: applicatio
 Los handlers reciben el repositorio generado por sqlc (`*sqlc.Queries`) dentro de `Server`. Los errores de PostgreSQL se
 traducen a HTTP en un único lugar (`dbError`): sin filas → 404, violación de `UNIQUE` → 409, violación de clave foránea → 422.
 
-## Variables de entorno
-
-| Variable                                            | Uso                                                   | Default                                      |
-|-----------------------------------------------------|-------------------------------------------------------|----------------------------------------------|
-| `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | Credenciales de la base (compose, app y tests).       | `postgres` / `postgres` / `programacion_web` |
-| `DB_HOST`, `DB_PORT`                                | Dónde está la base (compose fija `DB_HOST=postgres`). | `localhost`, `5432`                          |
-| `APP_PORT`                                          | Puerto del host al que se publica la API (compose).   | `8080`                                       |
 
 ### Nota sobre las credenciales de la base
 
