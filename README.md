@@ -41,7 +41,7 @@ make test-api
 3. **Tareas posteriores:** al salir (haya pasado lo que haya pasado) se bajan contenedores y volúmenes (`make clean`).
    Si algo falló, antes se imprimen los últimos logs de la aplicación.
 
-La salida termina con una línea como `Resultado: 75 verificaciones correctas, 0 fallidas.`
+La salida termina con una línea como `Resultado: 90 verificaciones correctas, 0 fallidas.`
 
 ### Levantar la API para usarla a mano
 
@@ -130,14 +130,13 @@ Los errores devuelven `{"error": "mensaje"}`; las validaciones agregan el detall
 | 500    | Error interno (se registra en el log del servidor sin exponer detalles al cliente).                      |
 
 
-`requests.sh` contiene las peticiones probadas de cada endpoint principal, con casos válidos e inválidos.
-
+`requests.sh` contiene las peticiones probadas de cada endpoint, con casos válidos e inválidos.
 
 Los handlers reciben el repositorio generado por sqlc (`*sqlc.Queries`) dentro de `Server`. Los errores de PostgreSQL se
 traducen a HTTP en un único lugar (`dbError`): sin filas → 404, violación de `UNIQUE` → 409, violación de clave foránea → 422.
 
 
-### Nota sobre las credenciales de la base
+### Credenciales de la base
 
 `.env.example` solo lista las variables (`POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`) con valor vacío: **no hace
 falta completarlo ni crear un `.env`** para correr el proyecto. Alcanza con `make test-api`. Si no existe `.env` (o las

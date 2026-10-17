@@ -1,7 +1,7 @@
 -include .env
 export
 
-APP_NAME := programacion-web 
+APP_NAME := programacion-web
 
 .PHONY: all generate build test test-api clean docker db-up db-down run
 
