@@ -26,6 +26,7 @@ docker:
 	@docker compose up -d postgres
 
 build:
+	@mkdir -p tmp
 	@go build -o tmp/$(APP_NAME) .
 
 test:

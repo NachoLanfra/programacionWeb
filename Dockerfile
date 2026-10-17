@@ -1,4 +1,4 @@
-FROM golang:alpine AS builder
+FROM golang:1.25-alpine AS builder
 
 WORKDIR /app
 
@@ -19,4 +19,3 @@ COPY static /app/static
 EXPOSE 8080
 
 CMD ["/app/programacion-web"]
-

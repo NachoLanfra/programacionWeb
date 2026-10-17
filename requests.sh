@@ -61,6 +61,16 @@ fi
 request GET /
 check "GET / sirve la página estática" 200 'Plan De Estudios'
 
+section "Listados vacíos iniciales"
+request GET /usuarios
+check "GET /usuarios sin usuarios -> lista vacía" 200 '[]'
+
+request GET /materias
+check "GET /materias sin materias -> lista vacía" 200 '[]'
+
+request GET /correlatividades
+check "GET /correlatividades sin correlatividades -> lista vacía" 200 '[]'
+
 # USUARIOS 
 section "Usuarios: POST /usuarios"
 request POST /usuarios '{"nombre_apellido":"Ana Pérez","email":"ana@example.com","telefono":"2494111111"}'
@@ -128,6 +138,10 @@ check_header "devuelve el header Location" "Location: /materias/$MATERIA_ID"
 request POST /materias '{"nombre":"Algoritmos y Estructuras de Datos","anio":2,"cuatrimestre":1}'
 check "crea otra materia" 201
 MATERIA2_ID="$(json_int id_materia)"
+
+request POST /materias '{"nombre":"Bases de Datos","anio":3,"cuatrimestre":1}'
+check "crea una tercera materia" 201 '"nombre":"Bases de Datos"'
+MATERIA3_ID="$(json_int id_materia)"
 
 request POST /materias '{"nombre":"","anio":1,"cuatrimestre":1}'
 check "rechaza nombre vacío" 400 'nombre'
@@ -224,6 +238,15 @@ section "Correlatividades: POST /materias/{id}/correlativas"
 request POST "/materias/$MATERIA_ID/correlativas" "{\"materia_requerida_id\":$MATERIA2_ID}"
 check "Programación Web requiere Algoritmos" 201 "\"id_materia_requerida\":$MATERIA2_ID"
 
+request GET /correlatividades
+check "lista todas las correlatividades" 200 "\"materia_id_materia\":$MATERIA_ID"
+
+request GET "/materias/$MATERIA_ID/correlativas/$MATERIA2_ID"
+check "obtiene una correlatividad por id" 200 "\"id_materia\":$MATERIA2_ID"
+
+request GET "/materias/$MATERIA_ID/correlativas/$MATERIA3_ID"
+check "correlatividad inexistente -> 404" 404
+
 request POST "/materias/$MATERIA_ID/correlativas" "{\"materia_requerida_id\":$MATERIA2_ID}"
 check "correlatividad repetida -> 409" 409
 
@@ -242,9 +265,34 @@ check "materia inexistente -> 404" 404
 request POST "/materias/$MATERIA_ID/correlativas" '{}'
 check "falta materia_requerida_id -> 400" 400
 
-section "Correlatividades: GET y DELETE"
-request GET "/materias/$MATERIA_ID/correlativas"
+section "Correlatividades: PUT"
+request PUT "/materias/$MATERIA_ID/correlativas/$MATERIA2_ID" '{}'
+check "PUT sin nueva materia -> 400" 400
+
+request PUT "/materias/$MATERIA_ID/correlativas/$MATERIA2_ID" "{\"nueva_materia_id\":$MATERIA3_ID}"
+check "mueve la correlatividad a la nueva materia" 200 "\"materia_id_materia\":$MATERIA3_ID"
+
+request GET "/materias/$MATERIA3_ID/correlativas/$MATERIA2_ID"
+check "GET confirma la correlatividad actualizada" 200 "\"id_materia\":$MATERIA2_ID"
+
+request GET "/materias/$MATERIA_ID/correlativas/$MATERIA2_ID"
+check "la correlatividad anterior ya no existe -> 404" 404
+
+request PUT "/materias/$MATERIA_ID/correlativas/$MATERIA2_ID" "{\"nueva_materia_id\":$MATERIA3_ID}"
+check "PUT de correlatividad inexistente -> 404" 404
+
+request PUT "/materias/$MATERIA3_ID/correlativas/$MATERIA2_ID" '{"nueva_materia_id":999999}'
+check "PUT con nueva materia inexistente -> 404" 404
+
+request PUT "/materias/$MATERIA3_ID/correlativas/$MATERIA2_ID" "{\"nueva_materia_id\":$MATERIA2_ID}"
+check "PUT que la haría requerirse a sí misma -> 400" 400
+
+section "Correlatividades: GET y DELETE (sobre la materia 3)"
+request GET "/materias/$MATERIA3_ID/correlativas"
 check "lista las correlativas" 200 'Algoritmos y Estructuras de Datos'
+
+request GET "/materias/$MATERIA_ID/correlativas"
+check "la materia original ya no tiene correlativas -> lista vacía" 200 '[]'
 
 request GET "/materias/$MATERIA2_ID/correlativas"
 check "materia sin correlativas -> lista vacía" 200 '[]'
@@ -252,13 +300,13 @@ check "materia sin correlativas -> lista vacía" 200 '[]'
 request GET /materias/999999/correlativas
 check "GET de materia inexistente -> 404" 404
 
-request DELETE "/materias/$MATERIA_ID/correlativas/$MATERIA2_ID"
+request DELETE "/materias/$MATERIA3_ID/correlativas/$MATERIA2_ID"
 check "elimina la correlatividad" 204
 
-request DELETE "/materias/$MATERIA_ID/correlativas/$MATERIA2_ID"
+request DELETE "/materias/$MATERIA3_ID/correlativas/$MATERIA2_ID"
 check "borrar de nuevo -> 404" 404
 
-request GET "/materias/$MATERIA_ID/correlativas"
+request GET "/materias/$MATERIA3_ID/correlativas"
 check "ya no quedan correlativas" 200 '[]'
 
 # BORRADO Y CASCADA
