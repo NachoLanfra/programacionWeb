@@ -26,7 +26,7 @@ func TestCorrelatividadMateriaCRUD(t *testing.T) {
 
 	// PREPARACION
 	materiaBase, err := queries.CreateMateria(ctx, sqlc.CreateMateriaParams{
-		Nombre:       "Análisis Matemático I",
+		Nombre:       "Correlatividad Test Base",
 		Anio:         1,
 		Cuatrimestre: 1,
 	})
@@ -35,7 +35,7 @@ func TestCorrelatividadMateriaCRUD(t *testing.T) {
 	}
 
 	materiaAvanzada1, err := queries.CreateMateria(ctx, sqlc.CreateMateriaParams{
-		Nombre:       "Análisis Matemático II",
+		Nombre:       "Correlatividad Test Avanzada 1",
 		Anio:         1,
 		Cuatrimestre: 2,
 	})
@@ -44,7 +44,7 @@ func TestCorrelatividadMateriaCRUD(t *testing.T) {
 	}
 
 	materiaAvanzada2, err := queries.CreateMateria(ctx, sqlc.CreateMateriaParams{
-		Nombre:       "Probabilidad y Estadística",
+		Nombre:       "Correlatividad Test Avanzada 2",
 		Anio:         2,
 		Cuatrimestre: 1,
 	})
