@@ -12,7 +12,8 @@ CREATE TABLE materia (
     nombre VARCHAR(100) NOT NULL,
     anio INT NOT NULL,
     cuatrimestre INT NOT NULL,
-    CONSTRAINT pk_materia PRIMARY KEY (id_materia)
+    CONSTRAINT pk_materia PRIMARY KEY (id_materia),
+    CONSTRAINT uq_materia_nombre UNIQUE (nombre)
 );
 
 CREATE TABLE usuario_materia (

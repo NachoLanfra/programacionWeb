@@ -1,4 +1,4 @@
-FROM golang:1.25-alpine AS builder
+FROM golang:1.26-alpine AS builder
 
 WORKDIR /app
 
@@ -14,7 +14,6 @@ FROM alpine:latest
 WORKDIR /app
 
 COPY --from=builder /app/programacion-web /app/programacion-web
-COPY static /app/static
 
 EXPOSE 8080
 

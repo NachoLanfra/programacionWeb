@@ -12,8 +12,12 @@ import (
 )
 
 type Server struct {
-	queries *sqlc.Queries
+	queries  *sqlc.Queries
+	alumnoID int32 // alumno fijo cuya planilla muestra la página
 }
+
+// emailAlumno identifica al alumno de prueba que crea la seed.
+const emailAlumno = "alumno@prueba.com"
 
 func getEnvOrDefault(key, def string) string {
 	if v := os.Getenv(key); v != "" {
@@ -54,49 +58,24 @@ func main() {
 	log.Println("Conectado a la base de datos")
 
 	// Server con las queries de sqlc
-	srv := &Server{queries: sqlc.New(pool)}
+	queries := sqlc.New(pool)
+	alumno, err := queries.GetUsuarioByEmail(ctx, emailAlumno)
+	if err != nil {
+		log.Fatalf("no se encontró el alumno %s (¿corriste make seed?): %v", emailAlumno, err)
+	}
+	srv := &Server{queries: queries, alumnoID: alumno.IDUsuario}
 
 	// Rutas
 	mux := http.NewServeMux()
 
 	// Health check
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+		w.Write([]byte("ok"))
 	})
 
-	// Servidor de estáticos
-	staticDir := "./static"
-	fileServer := http.FileServer(http.Dir(staticDir))
-	mux.Handle("GET /", fileServer)
-
-	// API de Materia
-	mux.HandleFunc("POST /materias", srv.crearMateria)
-	mux.HandleFunc("GET /materias", srv.listarMaterias)
-	mux.HandleFunc("GET /materias/{id}", srv.obtenerMateria)
-	mux.HandleFunc("PUT /materias/{id}", srv.actualizarMateria)
-	mux.HandleFunc("DELETE /materias/{id}", srv.eliminarMateria)
-
-	// API de Correlatividades de Materia
-	mux.HandleFunc("GET /correlatividades", srv.listTodasCorrelatividades)
-	mux.HandleFunc("POST /materias/{id}/correlativas", srv.createCorrelativa)
-	mux.HandleFunc("GET /materias/{id}/correlativas", srv.listCorrelativas)
-	mux.HandleFunc("GET /materias/{id}/correlativas/{requeridaId}", srv.getCorrelativa)
-	mux.HandleFunc("PUT /materias/{id}/correlativas/{requeridaId}", srv.updateCorrelativa)
-	mux.HandleFunc("DELETE /materias/{id}/correlativas/{requeridaId}", srv.deleteCorrelativa)
-
-	// API de Usuario
-	mux.HandleFunc("POST /usuarios", srv.createUsuario)
-	mux.HandleFunc("GET /usuarios", srv.listUsuarios)
-	mux.HandleFunc("GET /usuarios/{id}", srv.getUsuario)
-	mux.HandleFunc("PUT /usuarios/{id}", srv.updateUsuario)
-	mux.HandleFunc("DELETE /usuarios/{id}", srv.deleteUsuario)
-
-	// API de Usuario-Materia
-	mux.HandleFunc("POST /usuarios/{id}/materias", srv.createUsuarioMateria)
-	mux.HandleFunc("GET /usuarios/{id}/materias", srv.listUsuarioMateria)
-	mux.HandleFunc("GET /usuarios/{id}/materias/{materiaId}", srv.getUsuarioMateria)
-	mux.HandleFunc("PUT /usuarios/{id}/materias/{materiaId}", srv.updateUsuarioMateria)
-	mux.HandleFunc("DELETE /usuarios/{id}/materias/{materiaId}", srv.deleteUsuarioMateria)
+	// Página principal renderizada en el servidor
+	mux.HandleFunc("GET /{$}", srv.index)
+	mux.HandleFunc("POST /cursadas", srv.guardarCursada)
 
 	// Arrancar
 	serverPort := ":8080"

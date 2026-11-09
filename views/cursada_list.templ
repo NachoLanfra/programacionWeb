@@ -1,0 +1,39 @@
+package views
+
+import (
+	"strconv"
+
+	"ejerEsp.com/ejerEsp/db/sqlc"
+)
+
+templ CursadaList(plan []sqlc.ListPlanUsuarioRow) {
+	<section>
+		<h2>Mi plan de estudios</h2>
+		if len(plan) == 0 {
+			<p>No hay materias cargadas en el plan.</p>
+		} else {
+			<table>
+				<thead>
+					<tr>
+						<th>Año</th>
+						<th>Cuat.</th>
+						<th>Materia</th>
+						<th>Estado y nota</th>
+					</tr>
+				</thead>
+				<tbody>
+					for _, fila := range plan {
+						<tr>
+							<td>{ strconv.Itoa(int(fila.Anio)) }°</td>
+							<td>{ strconv.Itoa(int(fila.Cuatrimestre)) }°</td>
+							<td>{ fila.Nombre }</td>
+							<td>
+								@CursadaForm(fila)
+							</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		}
+	</section>
+}

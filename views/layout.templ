@@ -1,0 +1,37 @@
+package views
+
+templ Layout(titulo string) {
+	<!DOCTYPE html>
+	<html lang="es">
+		<head>
+			<meta charset="UTF-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+			<title>{ titulo }</title>
+			<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"/>
+			<style>
+				article.error {
+					border-left: 4px solid #c0392b;
+					display: flex;
+					justify-content: space-between;
+					align-items: flex-start;
+					gap: 1rem;
+				}
+				article.error p {
+					margin: 0.25rem 0 0;
+				}
+				article.error a {
+					text-decoration: none;
+				}
+			</style>
+		</head>
+		<body>
+			<header class="container">
+				<h1>Plan De Estudios Ingeniería De Sistemas UNICEN</h1>
+				<p>Materias del plan con su año y cuatrimestre.</p>
+			</header>
+			<main class="container">
+				{ children... }
+			</main>
+		</body>
+	</html>
+}

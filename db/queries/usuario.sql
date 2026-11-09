@@ -20,3 +20,7 @@ RETURNING *;
 -- name: DeleteUsuario :exec
 DELETE FROM usuario
 WHERE id_usuario = $1;
+
+-- name: GetUsuarioByEmail :one
+SELECT * FROM usuario
+WHERE email = $1;

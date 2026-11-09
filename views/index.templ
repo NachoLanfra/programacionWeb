@@ -1,0 +1,29 @@
+package views
+
+import "ejerEsp.com/ejerEsp/db/sqlc"
+
+// Aviso es el error que vuelve de un POST fallido (vacío si no hubo error).
+type Aviso struct {
+	Materia string
+	Mensaje string
+}
+
+templ IndexPage(alumno sqlc.Usuario, plan []sqlc.ListPlanUsuarioRow, aviso Aviso) {
+	@Layout("Plan De Estudios") {
+		<p>Alumno: <strong>{ alumno.NombreApellido }</strong></p>
+		if aviso.Mensaje != "" {
+			<article class="error" role="alert">
+				<div>
+					if aviso.Materia != "" {
+						<strong>No se pudo guardar { aviso.Materia }</strong>
+					} else {
+						<strong>No se pudo guardar</strong>
+					}
+					<p>{ aviso.Mensaje }</p>
+				</div>
+				<a href="/" aria-label="Cerrar aviso">✕</a>
+			</article>
+		}
+		@CursadaList(plan)
+	}
+}
