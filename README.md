@@ -1,181 +1,189 @@
-# Programación Web - Trabajo Práctico 3: API REST
+# Programación Web - Trabajo Práctico 5: Renderizado del lado del servidor con templ
 
-Plan de estudios para la carrera de Ingeniería en Sistemas (UNICEN). El proyecto modela usuarios, materias,
-el progreso de cada usuario en cada materia, y las correlatividades entre materias.
+Plan de estudios de Ingeniería de Sistemas (UNICEN, plan 2023). La página muestra las 38 materias del plan y deja
+que el alumno registre, para cada una, su **estado** (sin cursar, cursando, regular o finalizada) y su **nota**,
+respetando las **correlatividades** entre materias.
 
-En el **TP3** la capa de datos del TP2 (PostgreSQL + sqlc) se expone como una **API REST** en JSON, implementada
-con la biblioteca estándar de Go (`net/http`, con las rutas por método y variables de Go 1.22+) y empaquetada con Docker.
+En el **TP5** se abandona el esquema API JSON + cliente JavaScript del TP4: el servidor Go consulta la base,
+arma el HTML completo con componentes [templ](https://templ.guide) y lo envía ya renderizado. El navegador no
+ejecuta JavaScript propio; los formularios hacen un `POST` clásico y el servidor responde con una redirección
+(patrón **Post/Redirect/Get**).
 
 ## Requisitos previos
 
 - [Docker](https://docs.docker.com/get-docker/) y Docker Compose (v2: `docker compose`)
-- [Go](https://go.dev/dl/) en la versión que indica `go.mod` (1.25)
-- [sqlc](https://docs.sqlc.dev/en/latest/overview/install.html) instalado y disponible en el `PATH`
-- `make` y `curl`
+- [Go](https://go.dev/dl/) en la versión que indica `go.mod` (1.26)
+- [sqlc](https://docs.sqlc.dev/en/latest/overview/install.html) disponible en el `PATH`
+- templ: `go install github.com/a-h/templ/cmd/templ@latest` (el Makefile lo busca en `$(go env GOPATH)/bin`)
+- `make`
 
-> **Importante:** el daemon de Docker tiene que estar corriendo antes de ejecutar `make test-api`.
+> El daemon de Docker tiene que estar corriendo antes de ejecutar `make run-app`.
 > En Linux con systemd: `sudo systemctl start docker` (verificar con `docker info`).
-> En macOS/Windows con Docker Desktop alcanza con abrir la aplicación y esperar a que quede en "running".
 
-## Cómo ejecutar y probar la API
-
-Todo el flujo (generar código, compilar, levantar la base y la app, probar cada endpoint y limpiar) está automatizado:
+## Cómo ejecutar
 
 ```bash
 git clone https://github.com/NachoLanfra/programacionWeb.git
 cd programacionWeb
-git checkout tp3
-make test-api
+git checkout tp5
+make run-app
 ```
 
-`make test-api` (que corre `test-api.sh`) hace lo siguiente:
-
-1. **Tareas previas**
-   - Baja contenedores y volúmenes que hayan quedado de una corrida anterior (`make clean`).
-   - Genera el código de acceso a datos con sqlc (`make generate`).
-   - Compila el proyecto (`make build`).
-   - Levanta PostgreSQL con Docker Compose y espera (con timeout) a que acepte conexiones (`pg_isready`).
-   - Construye la imagen de la aplicación, la levanta y espera (con timeout) a que `GET /health` responda.
-2. **Prueba de cada endpoint:** ejecuta `requests.sh`, que hace las peticiones con `curl` y **verifica el código HTTP
-   y el contenido** de cada respuesta (casos válidos y de error). Si alguna verificación falla, termina con código distinto de 0.
-3. **Tareas posteriores:** al salir (haya pasado lo que haya pasado) se bajan contenedores y volúmenes (`make clean`).
-   Si algo falló, antes se imprimen los últimos logs de la aplicación.
-
-La salida termina con una línea como `Resultado: 90 verificaciones correctas, 0 fallidas.`
-
-### Levantar la API para usarla a mano
+y abrir <http://localhost:8080>. Para detener la aplicación, `Ctrl+C`. Después, para borrar contenedores y volúmenes:
 
 ```bash
-make generate                 # genera el código de sqlc (db/sqlc no se versiona)
-docker compose up -d --build  # levanta PostgreSQL + la API
-./requests.sh                 # (opcional) corre las mismas pruebas contra la API levantada
-make clean                    # baja todo y borra el volumen de la base
+make clean
 ```
 
-La API queda en `http://localhost:8080` (el puerto del host se cambia con `APP_PORT`) y la página estática del TP1 en `/`.
-`requests.sh` acepta otra dirección con `BASE_URL=http://host:puerto ./requests.sh`.
+`make run-app` hace todo el flujo:
+
+1. **Tareas previas**
+   - Borra contenedores y volúmenes de una corrida anterior (`make clean`).
+   - Genera el código: `templ generate` (vistas) y `sqlc generate` (queries).
+   - Compila el proyecto en `tmp/` (`make build`).
+   - Levanta PostgreSQL con Docker Compose y espera (con timeout de 60 s) a que acepte conexiones.
+     Como el volumen es nuevo, Postgres crea el esquema y carga la seed automáticamente.
+2. **Ejecuta la aplicación** en el puerto 8080, hasta que se detiene con `Ctrl+C`.
+3. **Tareas posteriores:** `make clean` borra contenedores y volúmenes.
 
 ### Targets del Makefile
 
-| Comando         | Qué hace                                                                       |
-|-----------------|---------------------------------------------------------------------------------|
-| `make test-api` | **Ciclo completo del TP3:** preparar, levantar, probar la API y limpiar.         |
-| `make generate` | Ejecuta sqlc.                                                                    |
-| `make build`    | Compila el binario en `tmp/`.                                                    |
-| `make test`     | Tests de persistencia del TP2 (`go test ./...` contra PostgreSQL real).          |
-| `make clean`    | Baja contenedores y volúmenes y borra `tmp/`.                                    |
+| Comando         | Qué hace                                                                          |
+|-----------------|------------------------------------------------------------------------------------|
+| `make run-app`  | **Ciclo completo del TP5:** limpia, genera, compila, levanta la base y ejecuta.    |
+| `make run`      | Uso diario: genera, levanta la base **sin borrar datos** y arranca con `go run`.   |
+| `make generate` | Ejecuta `templ generate` y `sqlc generate`.                                        |
+| `make templ`    | Solo `templ generate`.                                                             |
+| `make build`    | Genera el código y compila el binario en `tmp/`.                                   |
+| `make db-up`    | Levanta PostgreSQL y espera a que esté listo.                                      |
+| `make db-down`  | Baja los contenedores (los datos se conservan en el volumen).                      |
+| `make seed`     | Carga el plan de estudios en una base que ya existe (ver [Seed](#seed)).           |
+| `make test`     | Tests de persistencia del TP2 (`go test ./...` contra PostgreSQL real).            |
+| `make clean`    | Baja contenedores, **borra el volumen de la base** y borra `tmp/`.                 |
 
-## API REST
+## Cómo funciona la página
 
-Todas las respuestas son JSON (`Content-Type: application/json`), salvo los `204 No Content`.
-Los campos usan los mismos nombres que las columnas de la base (`id_usuario`, `nombre_apellido`, ...).
+### Rutas
 
-### Endpoints
+| Método | Ruta        | Qué hace                                                                                       |
+|--------|-------------|-------------------------------------------------------------------------------------------------|
+| `GET`  | `/`         | Lista el plan del alumno (materias + su estado y nota) y lo renderiza con templ.                |
+| `POST` | `/cursadas` | Recibe el formulario de una fila, valida, guarda y redirige a `/` (303 See Other).              |
+| `GET`  | `/health`   | Responde `ok`.                                                                                  |
 
-| Método   | Ruta                                         | Descripción                                             | Respuestas              |
-|----------|----------------------------------------------|---------------------------------------------------------|-------------------------|
-| `GET`    | `/health`                                    | Estado de la API                                        | 200                     |
-| `POST`   | `/usuarios`                                  | Crea un usuario                                         | 201, 400, 409           |
-| `GET`    | `/usuarios`                                  | Lista todos los usuarios                                | 200                     |
-| `GET`    | `/usuarios/{id}`                             | Obtiene un usuario                                      | 200, 400, 404           |
-| `PUT`    | `/usuarios/{id}`                             | Actualiza un usuario                                    | 200, 400, 404, 409      |
-| `DELETE` | `/usuarios/{id}`                             | Elimina un usuario (y su progreso, en cascada)          | 204, 400, 404           |
-| `POST`   | `/materias`                                  | Crea una materia                                        | 201, 400                |
-| `GET`    | `/materias`                                  | Lista las materias                                      | 200                     |
-| `GET`    | `/materias/{id}`                             | Obtiene una materia                                     | 200, 400, 404           |
-| `PUT`    | `/materias/{id}`                             | Actualiza una materia                                   | 200, 400, 404           |
-| `DELETE` | `/materias/{id}`                             | Elimina una materia (en cascada)                        | 204, 400, 404           |
-| `POST`   | `/usuarios/{id}/materias`                    | Registra el estado de un usuario en una materia         | 201, 400, 404, 409, 422 |
-| `GET`    | `/usuarios/{id}/materias`                    | Lista el progreso del usuario                           | 200, 400, 404           |
-| `GET`    | `/usuarios/{id}/materias/{materiaId}`        | Progreso del usuario en una materia                     | 200, 400, 404           |
-| `PUT`    | `/usuarios/{id}/materias/{materiaId}`        | Actualiza estado y nota                                 | 200, 400, 404           |
-| `DELETE` | `/usuarios/{id}/materias/{materiaId}`        | Elimina el registro de progreso                         | 204, 400, 404           |
-| `GET`    | `/correlatividades`                          | Lista todas las correlatividades                        | 200                     |
-| `POST`   | `/materias/{id}/correlativas`                | Agrega una materia requerida a la materia `{id}`        | 201, 400, 404, 409, 422 |
-| `GET`    | `/materias/{id}/correlativas`                | Lista las materias requeridas por `{id}`                | 200, 400, 404           |
-| `GET`    | `/materias/{id}/correlativas/{requeridaId}`  | Devuelve la materia `{requeridaId}` si `{id}` la requiere | 200, 400, 404         |
-| `PUT`    | `/materias/{id}/correlativas/{requeridaId}`  | Pasa la correlatividad a otra materia (ver abajo)       | 200, 400, 404, 409      |
-| `DELETE` | `/materias/{id}/correlativas/{requeridaId}`  | Quita una correlatividad                                | 204, 400, 404           |
+Si el `POST` no pasa alguna validación, el servidor redirige a `/?materia=...&error=...` y la página muestra el
+aviso arriba de la tabla. Sigue siendo PRG: el navegador siempre termina en un `GET`, así que recargar con F5
+no reenvía el formulario.
 
-**`PUT` de una correlatividad:** recibe `{"nueva_materia_id": N}` y cambia la relación "`{id}` requiere `{requeridaId}`"
-por "`N` requiere `{requeridaId}`". Verifica que `N` exista, que la correlatividad original exista y que el cambio no forme un ciclo directo.
+### Componentes templ (`views/`)
 
-### Cuerpos de las peticiones y validaciones
+| Archivo               | Componente           | Qué renderiza                                                                    |
+|-----------------------|----------------------|-----------------------------------------------------------------------------------|
+| `layout.templ`        | `Layout(titulo)`     | Estructura base (`html`, `head`, `body`), con [Pico.css](https://picocss.com) por CDN. |
+| `cursada_list.templ`  | `CursadaList(plan)`  | Tabla con todas las materias del plan, ordenadas por año y cuatrimestre.          |
+| `cursada_form.templ`  | `CursadaForm(fila)`  | Formulario de cada fila: estado, nota y botón Guardar (`POST /cursadas`).         |
+| `index.templ`         | `IndexPage(...)`     | Página principal: usa el layout, muestra el aviso de error (si hay) y la tabla.   |
 
-| Recurso         | Campos                                    | Validaciones                                                                                    |
-|-----------------|-------------------------------------------|--------------------------------------------------------------------------------------------------|
-| Usuario         | `nombre_apellido`, `email`, `telefono`    | Obligatorios (se recortan espacios); email con formato válido; máx. 100 / 100 / 20 caracteres.   |
-| Materia         | `nombre`, `anio`, `cuatrimestre`          | `nombre` obligatorio; `anio` entre 1 y 5; `cuatrimestre` 1 o 2.                                  |
-| Progreso (POST) | `materia_id`, `estado`, `nota` (opcional) | `estado` ∈ `sin_cursar`, `cursando`, `aprobada`, `desaprobada`; `nota` entre 0 y 10 (o ausente). |
-| Progreso (PUT)  | `estado`, `nota` (opcional)               | Igual que arriba.                                                                                |
-| Correlatividad  | `materia_requerida_id`                    | Entero positivo, distinto de la propia materia; no puede existir la correlatividad inversa.      |
+`templ generate` compila cada `.templ` a un `*_templ.go`. Esos archivos se versionan (el Dockerfile no corre
+templ) y no se editan a mano.
 
-El JSON se lee de forma estricta: se rechazan cuerpos mal formados o con campos desconocidos. Los ids de la URL deben ser enteros positivos.
+### Alumno
 
-### Códigos de error
+No hay login: la página muestra siempre el plan de un **alumno de prueba** (`alumno@prueba.com`) que crea la
+seed. El servidor lo busca por email al arrancar; si no existe, termina con un mensaje que sugiere correr `make seed`.
 
-Los errores devuelven `{"error": "mensaje"}`; las validaciones agregan el detalle por campo:
+### Reglas de validación
 
-```json
-{"error":"error de validación","campos":{"email":"no tiene un formato válido","nombre_apellido":"es obligatorio"}}
-```
+**Estado y nota:**
 
-| Código | Cuándo                                                                                                  |
-|--------|----------------------------------------------------------------------------------------------------------|
-| 400    | JSON inválido, campos que no pasan la validación, o id de la URL inválido.                               |
-| 404    | El recurso no existe (incluye `DELETE` de un id inexistente).                                            |
-| 405    | Método no soportado para esa ruta.                                                                       |
-| 409    | Conflicto: email repetido, materia ya registrada para el usuario, correlatividad repetida o en ciclo.    |
-| 422    | El cuerpo referencia algo que no existe (por ejemplo, una `materia_id` inexistente).                     |
-| 500    | Error interno (se registra en el log del servidor sin exponer detalles al cliente).                      |
+| Estado      | Nota                              |
+|-------------|------------------------------------|
+| Sin cursar  | No lleva (se rechaza si viene).    |
+| Cursando    | No lleva (se rechaza si viene).    |
+| Regular     | Obligatoria, entre 4 y 10.         |
+| Finalizada  | Obligatoria, entre 4 y 10. Incluye promoción o final rendido. |
 
+**Correlatividades:** cada estado exige algo distinto de las correlativas de la materia:
 
-`requests.sh` contiene las peticiones probadas de cada endpoint, con casos válidos e inválidos.
+| Para marcar una materia como... | Sus correlativas tienen que estar...  |
+|---------------------------------|----------------------------------------|
+| Sin cursar                      | En cualquier estado (no se exige nada). |
+| Cursando o Regular              | Regulares o finalizadas.               |
+| Finalizada                      | Finalizadas.                           |
 
-Los handlers reciben el repositorio generado por sqlc (`*sqlc.Queries`) dentro de `Server`. Los errores de PostgreSQL se
-traducen a HTTP en un único lugar (`dbError`): sin filas → 404, violación de `UNIQUE` → 409, violación de clave foránea → 422.
+Por ejemplo, para cursar Introducción a la Programación II hay que tener Introducción a la Programación I
+regular o finalizada; para finalizarla, Introducción a la Programación I tiene que estar finalizada.
 
+La regla también se controla al revés: no se puede **bajar** el estado de una materia si otra que depende de
+ella dejaría de cumplir sus correlativas. Por ejemplo, si Introducción a la Programación II está finalizada,
+Introducción a la Programación I no puede volver a regular.
 
-### Credenciales de la base
-
-`.env.example` solo lista las variables (`POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`) con valor vacío: **no hace
-falta completarlo ni crear un `.env`** para correr el proyecto. Alcanza con `make test-api`. Si no existe `.env` (o las
-variables quedan vacías), `docker-compose.yml`, la aplicación y los tests en Go caen a los mismos valores por default
-(`postgres` / `postgres` / `programacion_web`), pensados exclusivamente para que el flujo de test funcione sin pasos manuales.
-
-Esto es válido solo para este entorno de test, que se crea y se borra en cada corrida y no tiene datos reales. En un
-proyecto real no se harían así las cosas: no dejaríamos credenciales por default ni en el código ni en el
-`docker-compose.yml`, y la aplicación debería fallar si falta alguna, en vez de arrancar igual con un valor por defecto.
+Todas las validaciones se hacen en el servidor (`handlers.go`). Los atributos del HTML (`min`, `max`) solo
+ayudan a avisar antes de enviar.
 
 ## Persistencia
 
 ### Motor de base de datos
 
-El proyecto usa **PostgreSQL 15**, corriendo en un contenedor Docker. Al levantar el contenedor por primera vez
-(o después de un `make clean`, que borra el volumen), el esquema se inicializa automáticamente montando
-`db/schema/schema.sql` en `/docker-entrypoint-initdb.d/schema.sql`, que Postgres ejecuta en el primer arranque.
+**PostgreSQL 15** en un contenedor Docker. Al crear la base por primera vez (o después de `make clean`),
+Postgres ejecuta en orden los scripts montados en `/docker-entrypoint-initdb.d/`:
+
+1. `01-schema.sql` ← `db/schema/schema.sql` (tablas y restricciones).
+2. `02-seed.sql` ← `db/seed/seed.sql` (plan de estudios y alumno de prueba).
 
 ### Modelo de datos
 
-| Tabla                    | Descripción                                                                                                   |
-|--------------------------|----------------------------------------------------------------------------------------------------------------|
-| `usuario`                | Alumnos de la carrera: nombre y apellido, email (único) y teléfono.                                           |
-| `materia`                | Materias del plan de estudios: nombre, año y cuatrimestre en que se dicta.                                    |
-| `usuario_materia`        | Tabla intermedia (N a N) entre `usuario` y `materia`: guarda el **estado** de cursada y, opcionalmente, la **nota**. |
-| `correlatividad_materia` | Tabla intermedia (N a N) de `materia` consigo misma: indica qué materias son requisito de cada materia.       |
+| Tabla                    | Descripción                                                                                       |
+|--------------------------|----------------------------------------------------------------------------------------------------|
+| `usuario`                | Alumnos: nombre y apellido, email (único) y teléfono.                                              |
+| `materia`                | Materias del plan: nombre (único), año y cuatrimestre.                                             |
+| `usuario_materia`        | Cursada de un alumno en una materia: **estado** y **nota** (opcional).                             |
+| `correlatividad_materia` | Qué materias son requisito de cada materia (relación N a N de `materia` consigo misma).            |
 
-Todas las relaciones tienen `ON DELETE CASCADE`: si se borra un `usuario` o una `materia`, se borran
-automáticamente las filas asociadas en las tablas intermedias, evitando referencias huérfanas.
+Todas las relaciones tienen `ON DELETE CASCADE`: si se borra un usuario o una materia, se borran sus filas
+en las tablas intermedias.
+
+### Seed
+
+`db/seed/seed.sql` carga:
+
+- las **38 materias** del plan 2023 y sus **52 correlatividades** (buscadas por nombre, no por id);
+- el **alumno de prueba**;
+- sus **cursadas iniciales**: un alumno de 2° año, con 1° año finalizado o regular y las materias del
+  primer cuatrimestre de 2° cursando. Respetan las correlatividades.
+
+`make seed` se puede correr **varias veces sin duplicar datos**: todos los `INSERT` usan
+`ON CONFLICT DO NOTHING`, que saltea las filas que ya existen. Por lo mismo, **no pisa** lo que ya está cargado: si se cambiaron cursadas desde la
+página, `make seed` no las vuelve a su valor original. Para volver al estado inicial:
+
+```bash
+make clean   # borra el volumen
+make run     # recrea la base: esquema + seed
+```
 
 ### Acceso a datos
 
-- **sqlc** genera código Go tipado (`db/sqlc/*.go`) a partir del esquema (`db/schema/schema.sql`) y de las queries
-  escritas a mano en `db/queries/*.sql`. Este código generado **no se versiona** (está en `.gitignore`); se regenera
-  con `make generate` como parte de `make test-api` y `make test`.
-- **pgx/v5** es el driver de PostgreSQL. La API usa un pool de conexiones (`pgxpool`), porque atiende peticiones concurrentes.
+- **sqlc** genera código Go tipado (`db/sqlc/`) a partir del esquema y de las queries de `db/queries/*.sql`.
+  Ese código **no se versiona** (está en `.gitignore`); se regenera con `make generate`, que corre como parte
+  de `make run`, `make build` y `make test`.
+- **pgx/v5** es el driver de PostgreSQL; el servidor usa un pool de conexiones (`pgxpool`).
+
+### Credenciales de la base
+
+No hace falta crear un `.env` para correr el proyecto. Si no existe (o las variables quedan vacías),
+`docker-compose.yml`, el Makefile y la aplicación usan los mismos valores por defecto
+(`postgres` / `postgres` / `programacion_web`). `.env.example` lista las variables que se pueden definir
+(`POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`).
+
+Esto es solo para el entorno del TP. En un proyecto real no dejaríamos credenciales por defecto y la
+aplicación debería fallar si falta alguna.
 
 ### Tests de persistencia (TP2)
 
-Los tests en `db/tests/` son **tests de integración**: se conectan a una base PostgreSQL real y ejercitan el ciclo
-CRUD de cada tabla con el paquete `testing` de Go. Se corren con `make test`. Cada test limpia los datos que crea
-(`t.Cleanup`), y `test.sh` baja el volumen de Postgres al finalizar.
+Los tests de `db/tests/` son **tests de integración**: se conectan a una base PostgreSQL real y ejercitan el
+CRUD de cada tabla. Se corren con `make test`.
+
+## Trabajos anteriores
+
+Como pide la consigna, en el TP5 se eliminaron los handlers de la API JSON. La API REST está en la rama `tp3`
+y el frontend con HTML/JS/CSS en la rama `tp4`.
