@@ -29,13 +29,9 @@ git checkout tp5
 make run-app
 ```
 
-y abrir <http://localhost:8080>. Para detener la aplicación, `Ctrl+C`. Después, para borrar contenedores y volúmenes:
+y abrir <http://localhost:8080>. Para detener la aplicación, `Ctrl+C`: la limpieza se hace sola.
 
-```bash
-make clean
-```
-
-`make run-app` hace todo el flujo:
+`make run-app` ejecuta `run-app.sh`, que hace todo el flujo:
 
 1. **Tareas previas**
    - Borra contenedores y volúmenes de una corrida anterior (`make clean`).
@@ -44,13 +40,15 @@ make clean
    - Levanta PostgreSQL con Docker Compose y espera (con timeout de 60 s) a que acepte conexiones.
      Como el volumen es nuevo, Postgres crea el esquema y carga la seed automáticamente.
 2. **Ejecuta la aplicación** en el puerto 8080, hasta que se detiene con `Ctrl+C`.
-3. **Tareas posteriores:** `make clean` borra contenedores y volúmenes.
+3. **Tareas posteriores:** detiene el servidor y borra contenedores y volúmenes (`make clean`).
+   Corren **siempre**, tanto al terminar con `Ctrl+C` como si falla algún paso anterior (por ejemplo, la
+   compilación), gracias a un `trap` de bash. Si algo falló, el script termina con código de error.
 
 ### Targets del Makefile
 
 | Comando         | Qué hace                                                                          |
 |-----------------|------------------------------------------------------------------------------------|
-| `make run-app`  | **Ciclo completo del TP5:** limpia, genera, compila, levanta la base y ejecuta.    |
+| `make run-app`  | **Ciclo completo:** limpia, genera, compila, levanta la base, ejecuta y limpia al salir. |
 | `make run`      | Uso diario: genera, levanta la base **sin borrar datos** y arranca con `go run`.   |
 | `make generate` | Ejecuta `templ generate` y `sqlc generate`.                                        |
 | `make templ`    | Solo `templ generate`.                                                             |

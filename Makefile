@@ -30,13 +30,11 @@ seed: db-up
 	@docker exec -i postgres_db psql -q -U $(POSTGRES_USER) -d $(POSTGRES_DB) < db/seed/seed.sql
 	@echo "Plan de estudios cargado"
 
-# Ciclo completo para probar el TP desde un clon limpio: borra contenedores y
-# volúmenes, genera código, compila, levanta la base (se crea de cero con el
-# esquema y la seed) y ejecuta la aplicación.
-# Al terminar (Ctrl+C), correr `make clean` para borrar contenedores y volúmenes.
-run-app: clean build db-up
-	@echo "Aplicación en http://localhost:8080 (Ctrl+C para detenerla)"
-	@./tmp/$(APP_NAME)
+# Ciclo completo para probar el TP desde un clon limpio (ver run-app.sh):
+# limpia, genera, compila, levanta la base, ejecuta la app y, al terminar o
+# fallar, detiene el servidor y borra contenedores y volúmenes.
+run-app:
+	@./run-app.sh
 
 # Uso diario: genera el código, levanta la base (sin borrar datos) y arranca el servidor.
 run: generate db-up
