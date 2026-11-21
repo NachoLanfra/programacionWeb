@@ -1,10 +1,5 @@
 #!/usr/bin/env bash
-# Ciclo completo para probar el TP desde un clon limpio:
-#   1. Tareas previas: borrar contenedores y volúmenes, generar código (templ + sqlc),
-#      compilar, levantar PostgreSQL y esperar a que esté listo.
-#   2. Ejecutar la aplicación hasta Ctrl+C.
-#   3. Tareas posteriores: detener el servidor y borrar contenedores y volúmenes.
-# Las tareas posteriores corren SIEMPRE (al terminar, al fallar o con Ctrl+C) gracias al trap.
+
 set -euo pipefail
 
 APP_BIN="./tmp/programacion-web"

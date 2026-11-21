@@ -7,12 +7,8 @@ POSTGRES_DB ?= programacion_web
 # templ se instala en el bin de Go, que puede no estar en el PATH.
 TEMPL := $(shell go env GOPATH)/bin/templ
 
-.PHONY: all generate templ build test clean docker db-up db-down run run-app seed
+.PHONY: all generate templ build test clean docker db-up db-down run run-app test-html seed
 
-# Levanta Postgres y espera (hasta 60 s) a que acepte conexiones por TCP.
-# Se chequea por TCP (-h 127.0.0.1) porque mientras Postgres corre el esquema y
-# la seed de la primera vez solo escucha por socket local: así la app no
-# arranca antes de que la base esté cargada.
 db-up:
 	@docker compose up -d postgres
 	@echo "Esperando a que la base de datos esté lista..."
@@ -30,11 +26,12 @@ seed: db-up
 	@docker exec -i postgres_db psql -q -U $(POSTGRES_USER) -d $(POSTGRES_DB) < db/seed/seed.sql
 	@echo "Plan de estudios cargado"
 
-# Ciclo completo para probar el TP desde un clon limpio (ver run-app.sh):
-# limpia, genera, compila, levanta la base, ejecuta la app y, al terminar o
-# fallar, detiene el servidor y borra contenedores y volúmenes.
 run-app:
 	@./run-app.sh
+
+# levanta todo de cero, prueba la página y los formularios, y limpia al terminar.
+test-html:
+	@./test-html.sh
 
 # Uso diario: genera el código, levanta la base (sin borrar datos) y arranca el servidor.
 run: generate db-up

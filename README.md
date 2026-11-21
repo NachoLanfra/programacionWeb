@@ -56,6 +56,7 @@ y abrir <http://localhost:8080>. Para detener la aplicación, `Ctrl+C`: la limpi
 | `make db-up`    | Levanta PostgreSQL y espera a que esté listo.                                      |
 | `make db-down`  | Baja los contenedores (los datos se conservan en el volumen).                      |
 | `make seed`     | Carga el plan de estudios en una base que ya existe (ver [Seed](#seed)).           |
+| `make test-html`| Pruebas automáticas del recorrido HTML (ver [Pruebas](#pruebas)).                  |
 | `make test`     | Tests de persistencia del TP2 (`go test ./...` contra PostgreSQL real).            |
 | `make clean`    | Baja contenedores, **borra el volumen de la base** y borra `tmp/`.                 |
 
@@ -176,10 +177,50 @@ No hace falta crear un `.env` para correr el proyecto. Si no existe (o las varia
 Esto es solo para el entorno del TP. En un proyecto real no dejaríamos credenciales por defecto y la
 aplicación debería fallar si falta alguna.
 
+## Pruebas
+
+Hay dos niveles de pruebas automáticas. Ambos levantan una base nueva y limpian contenedores y volúmenes al terminar.
+
+### Pruebas del recorrido HTML
+
+```bash
+make test-html
+```
+
+Prueban la aplicación de punta a punta, como la usaría el navegador. `test-html.sh` hace el ciclo completo:
+
+1. **Tareas previas:** `make clean`, genera el código, compila y levanta PostgreSQL (con el esquema y la seed).
+2. **Prueba:** levanta el servidor, espera a que `GET /health` responda y ejecuta `requests-html.sh`.
+3. **Tareas posteriores:** detiene el servidor y corre `make clean`, siempre (gracias a un `trap`). Si algo falló,
+   antes muestra los últimos logs del servidor.
+
+`requests-html.sh` hace las peticiones con `curl`: pide la página con `GET` y manda los formularios con `POST`
+(como `application/x-www-form-urlencoded`), **sin seguir las redirecciones**, para verificar el patrón
+Post/Redirect/Get. Verifica:
+
+- **Página principal:** responde 200, usa el layout con Pico.css, muestra el alumno y las 38 materias.
+- **Datos de la seed:** el estado seleccionado y la nota de varias filas.
+- **Guardado válido:** el `POST /cursadas` responde 303 a `/` y, al volver a pedir la página, la fila muestra el
+  estado y la nota nuevos (incluida una nota decimal).
+- **Validaciones de estado y nota:** cada caso inválido (nota en sin cursar o cursando, regular o finalizada sin
+  nota, nota fuera de 4 a 10 o no numérica, estado o materia inexistentes) redirige con el error y la página
+  muestra el aviso con la materia y el mensaje correctos.
+- **Correlatividades:** se rechaza cursar, regularizar o finalizar sin las correlativas necesarias, y bajar una
+  materia de la que dependen otras ya cargadas. En todos los casos se verifica que **no se guardó nada**.
+- **Rutas y seguridad:** `GET /cursadas` da 405, una ruta inexistente da 404, y el aviso escapa el HTML recibido en
+  la URL (no se puede inyectar un `<script>`).
+
+La salida termina con una línea como `Resultado: 95 verificaciones correctas, 0 fallidas.` Si alguna falla, el
+script termina con código distinto de 0.
+
 ### Tests de persistencia (TP2)
 
+```bash
+make test
+```
+
 Los tests de `db/tests/` son **tests de integración**: se conectan a una base PostgreSQL real y ejercitan el
-CRUD de cada tabla. Se corren con `make test`.
+CRUD de cada tabla con el paquete `testing` de Go.
 
 ## Trabajos anteriores
 
