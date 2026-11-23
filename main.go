@@ -76,6 +76,7 @@ func main() {
 	// Página principal renderizada en el servidor
 	mux.HandleFunc("GET /{$}", srv.index)
 	mux.HandleFunc("POST /cursadas", srv.guardarCursada)
+	mux.HandleFunc("DELETE /cursadas/{materiaId}", srv.borrarCursada)
 
 	// Arrancar
 	serverPort := ":8080"

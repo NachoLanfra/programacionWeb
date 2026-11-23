@@ -1,13 +1,21 @@
 #!/usr/bin/env bash
 
 set -euo pipefail
+cd "$(dirname "$0")"
+
+# Mismas credenciales que usa el Makefile para la base.
+if [ -f .env ]; then
+  set -a
+  source .env
+  set +a
+fi
 
 APP_BIN="./tmp/programacion-web"
 SERVER_PID=""
 
 cleanup() {
   local codigo=$?
-  trap - EXIT INT TERM   # evita que cleanup se ejecute dos veces
+  trap - EXIT INT TERM   # evita limpiar dos veces
 
   echo
   if [ -n "$SERVER_PID" ] && kill -0 "$SERVER_PID" 2>/dev/null; then
@@ -23,7 +31,7 @@ cleanup() {
 }
 
 trap cleanup EXIT
-# Ctrl+C o kill: salir con el código convencional (130 / 143); el trap EXIT limpia.
+# Ctrl+C o kill: salir y limpiar.
 trap 'exit 130' INT
 trap 'exit 143' TERM
 

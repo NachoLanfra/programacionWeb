@@ -6,8 +6,9 @@ import (
 	"ejerEsp.com/ejerEsp/db/sqlc"
 )
 
+// Tabla del plan; es el hx-target de los formularios.
 templ CursadaList(plan []sqlc.ListPlanUsuarioRow) {
-	<section>
+	<section id="plan">
 		<h2>Mi plan de estudios</h2>
 		if len(plan) == 0 {
 			<p>No hay materias cargadas en el plan.</p>
@@ -19,21 +20,47 @@ templ CursadaList(plan []sqlc.ListPlanUsuarioRow) {
 						<th>Cuat.</th>
 						<th>Materia</th>
 						<th>Estado y nota</th>
+						<th></th>
 					</tr>
 				</thead>
 				<tbody>
 					for _, fila := range plan {
-						<tr>
-							<td>{ strconv.Itoa(int(fila.Anio)) }°</td>
-							<td>{ strconv.Itoa(int(fila.Cuatrimestre)) }°</td>
-							<td>{ fila.Nombre }</td>
-							<td>
-								@CursadaForm(fila)
-							</td>
-						</tr>
+						@CursadaFila(fila)
 					}
 				</tbody>
 			</table>
 		}
 	</section>
+}
+
+// Fila de una materia; el botón Borrar aparece si tiene algo cargado.
+templ CursadaFila(fila sqlc.ListPlanUsuarioRow) {
+	<tr>
+		<td>{ strconv.Itoa(int(fila.Anio)) }°</td>
+		<td>{ strconv.Itoa(int(fila.Cuatrimestre)) }°</td>
+		<td>{ fila.Nombre }</td>
+		<td>
+			@CursadaForm(fila)
+		</td>
+		<td>
+			if fila.Estado != "sin_cursar" {
+				<button
+					type="button"
+					class="secondary outline"
+					hx-delete={ "/cursadas/" + strconv.Itoa(int(fila.IDMateria)) }
+					hx-target="closest tr"
+					hx-swap="outerHTML"
+					hx-confirm={ "¿Borrar la cursada de " + fila.Nombre + "?" }
+				>Borrar</button>
+			}
+		</td>
+	</tr>
+}
+
+// Fila reseteada más el aviso, como respuesta al borrar.
+templ FilaConAviso(fila sqlc.ListPlanUsuarioRow, aviso Aviso) {
+	@CursadaFila(fila)
+	<hx-partial hx-target="#aviso" hx-swap="innerHTML">
+		@AvisoContenido(aviso)
+	</hx-partial>
 }

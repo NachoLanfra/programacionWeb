@@ -1,0 +1,46 @@
+package views
+
+// Error de un guardado o borrado fallido.
+type Aviso struct {
+	Accion  string // "guardar" o "borrar"; vacío = guardar
+	Materia string
+	Mensaje string
+}
+
+// Título del aviso, por ejemplo "No se pudo borrar Cálculo II".
+func (a Aviso) Titulo() string {
+	accion := a.Accion
+	if accion == "" {
+		accion = "guardar"
+	}
+	titulo := "No se pudo " + accion
+	if a.Materia != "" {
+		titulo += " " + a.Materia
+	}
+	return titulo
+}
+
+// Contenedor del aviso; con oob se actualiza aparte de la tabla.
+templ AvisoBox(aviso Aviso, oob bool) {
+	if oob {
+		<div id="aviso" hx-swap-oob="true">
+			@AvisoContenido(aviso)
+		</div>
+	} else {
+		<div id="aviso">
+			@AvisoContenido(aviso)
+		</div>
+	}
+}
+
+templ AvisoContenido(aviso Aviso) {
+	if aviso.Mensaje != "" {
+		<article class="error" role="alert">
+			<div>
+				<strong>{ aviso.Titulo() }</strong>
+				<p>{ aviso.Mensaje }</p>
+			</div>
+			<a href="/" aria-label="Cerrar aviso">✕</a>
+		</article>
+	}
+}

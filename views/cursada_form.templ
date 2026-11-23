@@ -6,7 +6,7 @@ import (
 	"ejerEsp.com/ejerEsp/db/sqlc"
 )
 
-// Estados posibles de una cursada: valor que se guarda y texto que se muestra.
+// Estados posibles: valor guardado y texto visible.
 var estados = []struct{ Valor, Texto string }{
 	{"sin_cursar", "Sin cursar"},
 	{"cursando", "Cursando"},
@@ -14,7 +14,7 @@ var estados = []struct{ Valor, Texto string }{
 	{"finalizada", "Finalizada"},
 }
 
-// notaTexto devuelve la nota como texto, o "" si todavía no tiene.
+// Nota como texto, vacía si no tiene.
 func notaTexto(fila sqlc.ListPlanUsuarioRow) string {
 	if !fila.Nota.Valid {
 		return ""
@@ -22,8 +22,9 @@ func notaTexto(fila sqlc.ListPlanUsuarioRow) string {
 	return strconv.FormatFloat(float64(fila.Nota.Float32), 'f', -1, 32)
 }
 
+// Formulario de una fila; guarda sin recargar la página.
 templ CursadaForm(fila sqlc.ListPlanUsuarioRow) {
-	<form method="POST" action="/cursadas">
+	<form method="POST" action="/cursadas" hx-post="/cursadas" hx-target="#plan" hx-swap="outerHTML">
 		<input type="hidden" name="materia_id" value={ strconv.Itoa(int(fila.IDMateria)) }/>
 		<fieldset role="group">
 			<select name="estado" aria-label="Estado">

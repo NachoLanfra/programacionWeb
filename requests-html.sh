@@ -11,14 +11,14 @@ BODY=""
 HEADERS=""
 LOCATION=""
 
-# request METODO RUTA [campo=valor ...]
-# Deja el resultado en STATUS, BODY, HEADERS y LOCATION.
+# Hace el pedido y guarda STATUS, BODY, HEADERS y LOCATION.
 request() {
   local method="$1" path="$2"
   shift 2
   local hdr_file out
   hdr_file="$(mktemp)"
   local args=(-s -S -X "$method" -D "$hdr_file" -o - -w '\n%{http_code}' "$BASE_URL$path")
+  [ -n "${HX:-}" ] && args+=(-H "HX-Request: true")
   local campo
   for campo in "$@"; do
     args+=(--data-urlencode "$campo")
@@ -31,12 +31,12 @@ request() {
   rm -f "$hdr_file"
 }
 
-# hace el POST del formulario de la fila de esa materia.
+# POST del formulario de una materia.
 enviar() {
   request POST /cursadas "materia_id=$(id_materia "$1")" "estado=$2" "nota=$3"
 }
 
-# hace el GET al que redirigió el último POST (la "G" de PRG).
+# GET a donde redirigió el último POST.
 seguir() {
   request GET "$LOCATION"
 }
@@ -44,7 +44,7 @@ seguir() {
 pass() { PASSED=$((PASSED + 1)); echo "  ok   $1"; }
 fail() { FAILED=$((FAILED + 1)); echo "  FAIL $1"; echo "       status=$STATUS location=$LOCATION"; }
 
-# verifica el código HTTP y, opcionalmente, que el body contenga TEXTO.
+# Verifica el código y, si se pasa, un texto del body.
 check() {
   local desc="$1" expected="$2" needle="${3:-}"
   if [ "$STATUS" != "$expected" ]; then
@@ -56,12 +56,12 @@ check() {
   fi
 }
 
-# verifica que el body NO contenga TEXTO.
+# Verifica que el body no tenga un texto.
 check_not() {
   if [[ "$BODY" == *"$2"* ]]; then fail "$1 (el HTML contiene: $2)"; else pass "$1"; fi
 }
 
-# verifica un 303 See Other cuyo Location empieza con DESTINO.
+# Verifica un 303 hacia el destino.
 check_redirect() {
   local desc="$1" destino="$2"
   if [ "$STATUS" != "303" ]; then
@@ -73,7 +73,7 @@ check_redirect() {
   fi
 }
 
-# después de un POST inválido, verifica que redirija con error y que la página muestre el aviso para MATERIA con TEXTO.
+# Verifica el aviso de error tras un POST inválido.
 check_aviso() {
   local desc="$1" materia="$2" texto="$3"
   check_redirect "$desc: redirige con error" "/?"
@@ -89,12 +89,12 @@ check_aviso() {
   check "$desc: el aviso explica el error" 200 "$texto"
 }
 
-# imprime el HTML de la fila de la tabla de esa materia (de la última página pedida).
+# HTML de la fila de una materia.
 fila() {
   sed 's#</tr>#</tr>\n#g' <<<"$BODY" | grep -F "<td>$1</td>" | head -n1
 }
 
-# pide / y verifica el estado (y la nota) de una fila.
+# Verifica estado y nota de una fila.
 check_fila() {
   local desc="$1" materia="$2" estado="$3" nota="${4:-}"
   request GET /
@@ -113,7 +113,30 @@ check_fila() {
   fi
 }
 
-# busca el id de la materia en la base (los ids no son fijos).
+# Estado y nota guardados en la base, vacío si no hay cursada.
+estado_db() {
+  docker exec postgres_db psql -tA -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-programacion_web}" \
+    -c "SELECT estado || ' ' || COALESCE(nota::text, '-') FROM usuario_materia WHERE materia_id_materia = $(id_materia "$1")"
+}
+
+# Verifica el valor guardado en la base.
+check_db() {
+  local desc="$1" materia="$2" esperado="$3" actual
+  actual="$(estado_db "$materia")"
+  if [ "$actual" = "$esperado" ]; then pass "$desc"; else fail "$desc (en la base: '$actual', esperado '$esperado')"; fi
+}
+
+# Verifica que la respuesta empiece con un texto.
+check_empieza() {
+  if [[ "$BODY" == "$2"* ]]; then pass "$1"; else fail "$1 (no empieza con $2)"; fi
+}
+
+# Verifica un header de la respuesta (sin importar mayúsculas).
+check_header() {
+  if grep -qi "^$2" <<<"$HEADERS"; then pass "$1"; else fail "$1 (falta el header $2)"; fi
+}
+
+# Id de una materia por nombre.
 id_materia() {
   docker exec postgres_db psql -tA -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-programacion_web}" \
     -c "SELECT id_materia FROM materia WHERE nombre = '$1'"
@@ -138,7 +161,7 @@ check "responde 200" 200
 check "es la página renderizada con el layout" 200 "<title>Plan De Estudios</title>"
 check "carga Pico.css" 200 "pico.min.css"
 check "muestra el alumno" 200 "Alumno de Prueba"
-FILAS="$(grep -o '<td><form method="POST" action="/cursadas">' <<<"$BODY" | wc -l)"
+FILAS="$(grep -o '<td><form method="POST" action="/cursadas"' <<<"$BODY" | wc -l)"
 if [ "$FILAS" -eq 38 ]; then pass "la tabla tiene las 38 materias del plan"; else fail "la tabla tiene $FILAS filas (esperado 38)"; fi
 check_not "no hay aviso de error" 'class="error"'
 
@@ -229,6 +252,58 @@ check_fila "Programación I sigue finalizada con 8" "Introducción a la Programa
 enviar "Programación Orientada a Objetos" sin_cursar ""
 check_redirect "bajar una materia sin dependientes cargadas: 303 a /" "/"
 check_fila "POO quedó sin cursar" "Programación Orientada a Objetos" sin_cursar
+
+section "Guardar con HTMX (sin recargar)"
+request GET /
+check "la página carga HTMX" 200 "htmx.org@4.0.0"
+check "el formulario usa hx-post a la tabla" 200 'hx-post="/cursadas" hx-target="#plan" hx-swap="outerHTML"'
+
+HX=1 enviar "Álgebra Lineal" regular 6
+check "guardado válido: responde 200" 200
+check_empieza "devuelve solo el fragmento de la tabla" '<section id="plan">'
+check_not "no devuelve la página completa" "<html"
+check "vacía el aviso con hx-swap-oob" 200 '<div id="aviso" hx-swap-oob="true"></div>'
+if [[ "$(fila "Álgebra Lineal")" == *'value="regular" selected'* ]]; then pass "la fila del fragmento quedó regular"; else fail "la fila del fragmento no quedó regular"; fi
+check_db "se guardó en la base" "Álgebra Lineal" "regular 6"
+
+HX=1 enviar "Redes de Computadoras II" regular 8
+check "guardado inválido: responde 422" 422
+check "devuelve la tabla" 422 '<section id="plan">'
+check "manda el aviso con hx-swap-oob" 422 '<div id="aviso" hx-swap-oob="true">'
+check "el aviso explica el error" 422 "No se pudo guardar Redes de Computadoras II"
+check_db "no se guardó en la base" "Redes de Computadoras II" ""
+
+section "Borrar una cursada con HTMX"
+request GET /
+check "las filas cargadas tienen botón Borrar con hx-delete" 200 'hx-delete="/cursadas/'
+check "el botón apunta a su fila" 200 'hx-target="closest tr" hx-swap="outerHTML"'
+check "pide confirmación" 200 'hx-confirm="¿Borrar la cursada de Álgebra Lineal?"'
+if [[ "$(fila "Física II")$(fila "Teoría de la Información")" != *"hx-delete"* ]]; then pass "las materias sin cursar no tienen botón"; else fail "una materia sin cursar tiene botón"; fi
+
+HX=1 request DELETE "/cursadas/$(id_materia "Álgebra Lineal")"
+check "borrado válido: responde 200" 200
+check_empieza "devuelve solo la fila" "<tr>"
+check "la fila vuelve como sin cursar" 200 'value="sin_cursar" selected'
+check_not "la fila ya no tiene botón Borrar" "hx-delete"
+check "vacía el aviso con hx-partial" 200 '<hx-partial hx-target="#aviso" hx-swap="innerHTML"></hx-partial>'
+check_db "se borró de la base" "Álgebra Lineal" ""
+
+HX=1 request DELETE "/cursadas/$(id_materia "Introducción a la Programación I")"
+check "borrar con dependientes: responde 422" 422
+check "la fila queda como estaba" 422 'value="finalizada" selected'
+check "el aviso dice qué materia bloquea" 422 "dependen de ella: Introducción a la Programación II (finalizada)"
+check "el aviso dice que no se pudo borrar" 422 "No se pudo borrar Introducción a la Programación I"
+check_db "no se borró de la base" "Introducción a la Programación I" "finalizada 8"
+
+HX=1 request DELETE /cursadas/99999
+check "borrar una materia que no existe: 404" 404 "La materia no existe."
+check_header "manda el error al aviso, no a la fila" "HX-Retarget: #aviso"
+
+HX=1 request DELETE /cursadas/abc
+check "borrar con id inválido: 400" 400 "La materia no es válida."
+
+request GET "/cursadas/$(id_materia "Inglés")"
+check "GET sobre la ruta de borrado no está permitido" 405
 
 section "Rutas y seguridad"
 request GET /cursadas

@@ -15,7 +15,7 @@ import (
 	"ejerEsp.com/ejerEsp/db/sqlc"
 )
 
-// Estados posibles de una cursada: valor que se guarda y texto que se muestra.
+// Estados posibles: valor guardado y texto visible.
 var estados = []struct{ Valor, Texto string }{
 	{"sin_cursar", "Sin cursar"},
 	{"cursando", "Cursando"},
@@ -23,7 +23,7 @@ var estados = []struct{ Valor, Texto string }{
 	{"finalizada", "Finalizada"},
 }
 
-// notaTexto devuelve la nota como texto, o "" si todavía no tiene.
+// Nota como texto, vacía si no tiene.
 func notaTexto(fila sqlc.ListPlanUsuarioRow) string {
 	if !fila.Nota.Valid {
 		return ""
@@ -31,6 +31,7 @@ func notaTexto(fila sqlc.ListPlanUsuarioRow) string {
 	return strconv.FormatFloat(float64(fila.Nota.Float32), 'f', -1, 32)
 }
 
+// Formulario de una fila; guarda sin recargar la página.
 func CursadaForm(fila sqlc.ListPlanUsuarioRow) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
@@ -48,14 +49,14 @@ func CursadaForm(fila sqlc.ListPlanUsuarioRow) templ.Component {
 		}
 		ctx = templ.InitializeContext(ctx)
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<form method=\"POST\" action=\"/cursadas\"><input type=\"hidden\" name=\"materia_id\" value=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<form method=\"POST\" action=\"/cursadas\" hx-post=\"/cursadas\" hx-target=\"#plan\" hx-swap=\"outerHTML\"><input type=\"hidden\" name=\"materia_id\" value=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templruntime.NewAttributeExpression(strconv.Itoa(int(fila.IDMateria))).Resolve(ctx)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/cursada_form.templ`, Line: 27, Col: 82}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/cursada_form.templ`, Line: 28, Col: 82}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var2)
 		if templ_7745c5c3_Err != nil {
@@ -73,7 +74,7 @@ func CursadaForm(fila sqlc.ListPlanUsuarioRow) templ.Component {
 			var templ_7745c5c3_Var3 string
 			templ_7745c5c3_Var3, templ_7745c5c3_Err = templruntime.NewAttributeExpression(e.Valor).Resolve(ctx)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/cursada_form.templ`, Line: 31, Col: 28}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/cursada_form.templ`, Line: 32, Col: 28}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var3)
 			if templ_7745c5c3_Err != nil {
@@ -96,7 +97,7 @@ func CursadaForm(fila sqlc.ListPlanUsuarioRow) templ.Component {
 			var templ_7745c5c3_Var4 string
 			templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(e.Texto)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/cursada_form.templ`, Line: 31, Col: 77}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/cursada_form.templ`, Line: 32, Col: 77}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 			if templ_7745c5c3_Err != nil {
@@ -114,7 +115,7 @@ func CursadaForm(fila sqlc.ListPlanUsuarioRow) templ.Component {
 		var templ_7745c5c3_Var5 string
 		templ_7745c5c3_Var5, templ_7745c5c3_Err = templruntime.NewAttributeExpression(notaTexto(fila)).Resolve(ctx)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/cursada_form.templ`, Line: 34, Col: 125}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/cursada_form.templ`, Line: 35, Col: 125}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var5)
 		if templ_7745c5c3_Err != nil {
